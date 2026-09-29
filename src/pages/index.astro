@@ -1,19 +1,29 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import {
-  bride,
-  groom,
+  coupleFullNames,
+  event,
+  isPageEnabled,
+} from "@/config/event";
+import {
   homePageContent,
   navItems,
   siteTitleSuffix,
 } from "@/data/site-nav";
 
 const title = `${siteTitleSuffix}`;
-const description =
-  "Wedding details for Jeremiah Iromaka-Amajọ and Jane Onuoha, including celebration dates, venue highlights, and RSVP access.";
-const coupleMarqueeImages = [1, 2, 3, 4].map((photoNumber) => ({
+const description = `Wedding details for ${coupleFullNames}, including celebration dates, venue highlights, and RSVP access.`;
+// Alternates casual (brown/white: 1, 3, 6, 7, 8) and corporate (black: 2, 4, 5)
+// photos. There are fewer corporate shots, so 2 and 4 appear twice.
+const couplePhotoNumbers = [1, 2, 3, 4, 6, 5, 7, 2, 8, 4];
+// The marquee needs at least ~6 photos to fill wide screens; repeat the set if there are fewer.
+const marqueePhotoNumbers = Array.from(
+  { length: Math.max(6, couplePhotoNumbers.length) },
+  (_, i) => couplePhotoNumbers[i % couplePhotoNumbers.length],
+);
+const coupleMarqueeImages = marqueePhotoNumbers.map((photoNumber) => ({
   src: `/assets/couple/${photoNumber}.webp`,
-  alt: `${bride} and ${groom} portrait ${photoNumber}`,
+  alt: `${coupleFullNames} portrait ${photoNumber}`,
 }));
 
 const quickLinks = navItems
@@ -21,7 +31,11 @@ const quickLinks = navItems
   .slice(0, 4);
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout
+  title={title}
+  description={description}
+  loader={{ kind: "welcome", photo: "/assets/loaders/welcome.webp" }}
+>
   <main class="home-page">
 
     <!-- 1. Full-viewport hero -->
@@ -29,15 +43,17 @@ const quickLinks = navItems
       <div class="home-hero__bg" aria-hidden="true"></div>
       <div class="home-hero__scrim" aria-hidden="true"></div>
       <div class="home-hero__content">
-        <p class="home-hero__eyebrow">January 2 &amp; 4, 2027 · Abia State, Nigeria</p>
+        <p class="home-hero__eyebrow">{event.dateLabel} · {event.locationLabel}</p>
         <h1 id="home-title" class="home-hero__title">
-          <span>{bride.split(" ")[0]}</span>
+          <span>{event.partnerOne.firstName}</span>
           <span aria-hidden="true" class="home-hero__amp">&amp;</span>
-          <span>{groom.split(" ")[0]}</span>
+          <span>{event.partnerTwo.firstName}</span>
         </h1>
-        <a class="home-hero__cta" href={homePageContent.primaryCta.href}>
-          {homePageContent.primaryCta.label}
-        </a>
+        {isPageEnabled("rsvp") ? (
+          <a class="home-hero__cta" href={homePageContent.primaryCta.href}>
+            {homePageContent.primaryCta.label}
+          </a>
+        ) : null}
       </div>
       <a class="home-hero__scroll-hint" href="#events" aria-label="Scroll to celebrations">
         <span aria-hidden="true">Scroll</span>
@@ -153,7 +169,8 @@ const quickLinks = navItems
     position: absolute;
     inset: 0;
     z-index: 0;
-    background: url("/assets/couple/1.jpeg") center top / cover no-repeat;
+    /* Vertical focus keeps the couple's faces in frame on wide screens */
+    background: url("/assets/couple/hero.webp") center 30% / cover no-repeat;
     animation: home-hero-kenburns 24s ease-in-out forwards;
     will-change: transform;
   }
@@ -162,13 +179,21 @@ const quickLinks = navItems
     position: absolute;
     inset: 0;
     z-index: 0;
-    background: linear-gradient(
-      to bottom,
-      rgb(30 18 8 / 0.08) 0%,
-      rgb(30 18 8 / 0.04) 30%,
-      rgb(30 18 8 / 0.38) 62%,
-      rgb(30 18 8 / 0.72) 100%
-    );
+    /* Darkens the photo so the white names stay readable: an even base tint,
+       extra shade behind the centred text, and a deeper fade at the bottom. */
+    background:
+      radial-gradient(
+        ellipse 70% 55% at 50% 50%,
+        rgb(20 12 6 / 0.38) 0%,
+        rgb(20 12 6 / 0) 100%
+      ),
+      linear-gradient(
+        to bottom,
+        rgb(20 12 6 / 0.42) 0%,
+        rgb(20 12 6 / 0.34) 35%,
+        rgb(20 12 6 / 0.5) 65%,
+        rgb(20 12 6 / 0.78) 100%
+      );
   }
 
   .home-hero__content {
@@ -456,19 +481,30 @@ const quickLinks = navItems
     text-align: center;
   }
 
+  /* Flex instead of a fixed grid so any number of cards (pages can be
+     switched off in src/config/event.ts) stays centred */
   .home-explore__grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
+    --explore-cols: 2;
+    --explore-gap: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--explore-gap);
     max-width: min(100%, 68rem);
     margin-inline: auto;
     width: 100%;
   }
 
+  .home-explore__grid > .home-explore__card {
+    flex: 0 0
+      calc((100% - (var(--explore-cols) - 1) * var(--explore-gap)) / var(--explore-cols));
+    min-width: 0;
+  }
+
   @media (min-width: 640px) {
     .home-explore__grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 1.25rem;
+      --explore-cols: 4;
+      --explore-gap: 1.25rem;
     }
   }
 

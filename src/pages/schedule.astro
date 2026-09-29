@@ -1,16 +1,18 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import ColorsOfTheDay from "@/components/ColorsOfTheDay.astro";
 import EventIcon from "@/components/EventIcon.astro";
+import { coupleFullNames, event } from "@/config/event";
 import { siteTitleSuffix } from "@/data/site-nav";
 import { schedulePageData } from "@/data/schedule";
 
 const title = `Schedule · ${siteTitleSuffix}`;
-const description =
-  "Ceremony schedule for Jane Onuoha and Jeremiah Iromaka-Amajọ, including event dates and venues in Abia State, Nigeria.";
+const description = `Ceremony schedule for ${coupleFullNames}, including event dates and venues in ${event.locationLabel}.`;
 const canonicalHref = new URL("/schedule", Astro.url.origin).href;
 ---
 
 <BaseLayout
+  loader={{ kind: "curtain", title: "Schedule", photo: "/assets/loaders/schedule.webp" }}
   title={title}
   description={description}
   canonicalHref={canonicalHref}
@@ -54,9 +56,7 @@ const canonicalHref = new URL("/schedule", Astro.url.origin).href;
                     )}
                   </p>
                   {event.colorsOfTheDay ? (
-                    <p class="schedule-event-card__colors">
-                      Colors of the day: {event.colorsOfTheDay}
-                    </p>
+                    <ColorsOfTheDay colors={event.colorsOfTheDay} />
                   ) : null}
                   {event.notes ? (
                     <p class="schedule-event-card__notes copy-preserve-breaks">
@@ -332,15 +332,6 @@ const canonicalHref = new URL("/schedule", Astro.url.origin).href;
   .schedule-event-card__location {
     font-style: italic;
     font-weight: 600;
-  }
-
-  .schedule-event-card__colors {
-    margin: 0.95rem 0 0;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: rgb(110 82 60 / 0.82);
   }
 
   .schedule-event-card__location-link {

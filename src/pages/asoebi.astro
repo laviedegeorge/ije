@@ -1,79 +1,32 @@
 ---
+export const prerender = false;
+
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import AsoEbiContent from "@/components/asoebi/AsoEbiContent.astro";
+import InterestPage from "@/components/interest/InterestPage.astro";
+import { coupleNames } from "@/config/event";
+import { asoebiPageContent } from "@/data/interestPages";
 import { siteTitleSuffix } from "@/data/site-nav";
+import { resolveInvitee } from "@/util/inviteList";
+
+// Personal links look like ?n=ada&c=K7Q2M9 — the code grants access, the name personalises.
+const linkName = Astro.url.searchParams.get("n")?.trim() ?? "";
+const linkCode = Astro.url.searchParams.get("c")?.trim() ?? "";
+const invitee = await resolveInvitee("asoebi", linkCode, linkName);
 
 const title = `Asoebi · ${siteTitleSuffix}`;
-const description =
-  "Dress code, color palette, and fabric guide for each wedding celebration — Traditional Marriage and Church Wedding.";
-const canonicalHref = new URL("/asoebi", Astro.url.origin).href;
-
-const unlocked = Astro.url.searchParams.get("view") === "jane";
+const description = `Asoebi for ${coupleNames}'s Traditional Marriage and White Wedding.`;
 ---
 
 <BaseLayout
-  title={title}
-  description={description}
-  canonicalHref={canonicalHref}
+	title={title}
+	description={description}
+	loader={invitee ? { kind: "seal", guestName: invitee.name } : undefined}
 >
-  {unlocked ? (
-    <AsoEbiContent />
-  ) : (
-    <div class="asoebi-locked">
-      <div class="asoebi-locked__inner wrapper">
-        <p class="asoebi-locked__eyebrow">Dress Code</p>
-        <h1 class="asoebi-locked__title">Asoebi &amp; Colors of the Day</h1>
-        <p class="asoebi-locked__message">
-          This page will be updated with full dress code details — fabric codes,
-          swatch references, and vendor links — by <strong>August 15, 2026</strong>.
-          Check back then.
-        </p>
-      </div>
-    </div>
-  )}
+	<meta slot="head" name="robots" content="noindex" />
+	<InterestPage
+		content={asoebiPageContent}
+		endpoint="/api/asoebi"
+		invitee={invitee}
+		idPrefix="asoebi"
+	/>
 </BaseLayout>
-
-<style>
-  .asoebi-locked {
-    min-height: 100svh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding-block: clamp(6.75rem, 13vw, 9.5rem) clamp(3rem, 7vw, 6rem);
-  }
-
-  .asoebi-locked__inner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.25rem;
-    text-align: center;
-    max-width: 44rem;
-  }
-
-  .asoebi-locked__eyebrow {
-    margin: 0;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: rgb(92 74 61 / 0.75);
-  }
-
-  .asoebi-locked__title {
-    margin: 0;
-    font-family: var(--font-heading);
-    font-size: clamp(2.5rem, 7vw, 4.5rem);
-    font-weight: 400;
-    line-height: 1;
-    letter-spacing: 0.01em;
-    color: #3a2e26;
-  }
-
-  .asoebi-locked__message {
-    margin: 0;
-    font-size: clamp(0.95rem, 2vw, 1.05rem);
-    line-height: 1.82;
-    color: rgb(58 46 38 / 0.85);
-  }
-</style>

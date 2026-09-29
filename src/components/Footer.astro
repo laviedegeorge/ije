@@ -1,8 +1,12 @@
 ---
+import { event } from "@/config/event";
 import { navItems, siteTitleSuffix } from "@/data/site-nav";
 
-const year = 2027;
+const year = new Date(event.countdownTarget).getFullYear();
+const brandLead = siteTitleSuffix[0];
 const brandMiddle = siteTitleSuffix.slice(1);
+const secondInitial = event.partnerTwo.firstName[0];
+const { countdownTarget, countdownLabel } = event;
 const footerNavLinks = navItems.filter((n) => n.target === "_self")
 ---
 
@@ -21,7 +25,7 @@ const footerNavLinks = navItems.filter((n) => n.target === "_self")
     <p class="site-footer__brand" aria-label={siteTitleSuffix}>
       <span class="site-footer__brand-stage">
         <span class="site-footer__brand-row">
-          <span class="site-footer__brand-lead">J</span>
+          <span class="site-footer__brand-lead">{brandLead}</span>
           <span
             class="site-footer__brand-segment site-footer__brand-segment--full"
             >{brandMiddle}</span
@@ -30,13 +34,18 @@ const footerNavLinks = navItems.filter((n) => n.target === "_self")
             class="site-footer__brand-segment site-footer__brand-segment--initials"
             aria-hidden="true"
           >
-            &#x2665;&#xFE0E;J
+            &#x2665;&#xFE0E;{secondInitial}
           </span>
         </span>
       </span>
     </p>
 
-    <p class="site-footer__countdown" aria-live="polite"></p>
+    <p
+      class="site-footer__countdown"
+      aria-live="polite"
+      data-target={countdownTarget}
+      data-label={countdownLabel}
+    ></p>
 
     <p class="site-footer__meta">&copy; {year} · With love</p>
   </div>
@@ -54,22 +63,86 @@ const footerNavLinks = navItems.filter((n) => n.target === "_self")
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-end;
-    padding: 2rem 1.5rem calc(1.75rem + env(safe-area-inset-bottom, 0px));
+    justify-content: center;
+    /* Top padding clears the page's rounded edge that overlaps the footer */
+    padding: calc(2rem + var(--footer-overlap)) 1.5rem
+      calc(1.75rem + env(safe-area-inset-bottom, 0px));
     color: var(--footer-tan);
-    /* background-color: #1c120a; */
-    background-image:
+    /* Same treatment as the home hero: an even dark tint plus extra shade
+       behind the centred text so it stays readable over the photo */
+    --footer-scrim:
+      radial-gradient(
+        ellipse 60% 50% at 50% 55%,
+        rgb(20 12 6 / 0.4) 0%,
+        rgb(20 12 6 / 0) 100%
+      ),
       linear-gradient(
         to bottom,
-        rgb(18 10 4 / 0.18) 0%,
-        rgb(18 10 4 / 0.38) 55%,
-        rgb(18 10 4 / 0.62) 100%
-      ),
+        rgb(20 12 6 / 0.42) 0%,
+        rgb(20 12 6 / 0.5) 50%,
+        rgb(20 12 6 / 0.7) 100%
+      );
+    background-image:
+      var(--footer-scrim),
       url("/assets/for-footer.webp");
     background-size: cover;
-    background-position: top center;
+    /* Portrait photo in a wide strip: aim the visible slice at the couple's faces */
+    background-position: center 25%;
     background-repeat: no-repeat;
     box-shadow: 0 -20px 60px -8px rgb(18 10 4 / 0.35);
+  }
+
+  /*
+   * Desktop: the footer is too wide for a portrait photo to cover it and still
+   * show both faces. Scale the photo to the footer height instead (faces in the
+   * top ~60%, above the text), centre it, and fill the sides with a blurred copy.
+   * Photo aspect is 853×1280, so at 170% height it is ~1.13 × the footer height wide.
+   */
+  @media (min-width: 768px) {
+    .site-footer {
+      --footer-photo-half: calc(var(--site-footer-reveal) * 0.566);
+      isolation: isolate;
+      background: #2b2420;
+    }
+
+    .site-footer::before,
+    .site-footer::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    /* Blurred fill for the sides */
+    .site-footer::before {
+      inset: -3rem;
+      background: url("/assets/for-footer.webp") center 30% / cover no-repeat;
+      filter: blur(32px) brightness(0.6) saturate(0.9);
+    }
+
+    /* Sharp photo, edges faded into the blurred fill */
+    .site-footer::after {
+      inset: 0;
+      background:
+        var(--footer-scrim),
+        url("/assets/for-footer.webp") center 24% / auto 170% no-repeat;
+      --fade-start: calc(50% - var(--footer-photo-half));
+      --fade-end: calc(50% - var(--footer-photo-half) * 0.7);
+      -webkit-mask-image: linear-gradient(
+        to right,
+        transparent var(--fade-start),
+        #000 var(--fade-end),
+        #000 calc(100% - var(--fade-end)),
+        transparent calc(100% - var(--fade-start))
+      );
+      mask-image: linear-gradient(
+        to right,
+        transparent var(--fade-start),
+        #000 var(--fade-end),
+        #000 calc(100% - var(--fade-end)),
+        transparent calc(100% - var(--fade-start))
+      );
+    }
   }
 
   .site-footer__inner {
@@ -132,7 +205,8 @@ const footerNavLinks = navItems.filter((n) => n.target === "_self")
     max-width: 100%;
     height: 1.2em;
     font-family: var(--font-heading);
-    font-size: clamp(3rem, 8vw, 6.5rem);
+    /* Min size keeps "First & First" within a ~360px phone */
+    font-size: clamp(2.1rem, 8vw, 6.5rem);
     line-height: 1.2;
     color: #fff;
     letter-spacing: 0.02em;
@@ -264,17 +338,19 @@ const footerNavLinks = navItems.filter((n) => n.target === "_self")
   }
 
   function updateCountdown(el: HTMLElement) {
-    const wedding = new Date("2027-01-04T10:00:00+01:00");
+    const wedding = new Date(el.dataset.target ?? "");
+    const label = el.dataset.label ?? "";
+    if (Number.isNaN(wedding.getTime())) return;
     const now = new Date();
     const msLeft = wedding.getTime() - now.getTime();
     const days = Math.max(0, Math.ceil(msLeft / 86400000));
 
     if (days === 0) {
-      el.textContent = "Today · January 4, 2027";
+      el.textContent = `Today · ${label}`;
     } else if (days === 1) {
-      el.textContent = "Tomorrow · January 4, 2027";
+      el.textContent = `Tomorrow · ${label}`;
     } else {
-      el.textContent = `${days.toLocaleString()} days · January 4, 2027`;
+      el.textContent = `${days.toLocaleString()} days · ${label}`;
     }
   }
 

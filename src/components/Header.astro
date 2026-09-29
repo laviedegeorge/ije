@@ -1,8 +1,8 @@
 ---
+import { coupleNames, isPageEnabled } from "@/config/event";
 import { navItems } from "@/data/site-nav";
 
-const brandAlt = "J & J";
-const logoSrc = "/assets/logo-n.png";
+const showRsvp = isPageEnabled("rsvp");
 const cta = { href: "/rsvp", label: "RSVP" } as const;
 
 const pathname = Astro.url.pathname;
@@ -14,16 +14,20 @@ const isCurrent = (href: string): boolean => {
 };
 ---
 
-<div class="app-header" data-app-header>
+<div class="app-header" data-app-header data-over-photo={pathname === "/" ? "" : undefined}>
 	<div class="app-header__bar">
 		<div class="app-header__bar-inner">
 			<div class="app-header__idle">
 				<a href="/" class="app-header__logo">
-					<img class="app-header__logo-img" src={logoSrc} alt={brandAlt} width="500" height="80" decoding="async" />
+					<span class="sr-only">{coupleNames}</span>
+					<span class="app-header__logo-img app-header__wordmark" aria-hidden="true">
+						<img class="app-header__monogram app-header__monogram--dark" src="/assets/monogram-brown.webp" alt="" width="267" height="240" decoding="async" />
+						<img class="app-header__monogram app-header__monogram--light" src="/assets/monogram-white.webp" alt="" width="263" height="240" decoding="async" />
+					</span>
 				</a>
 
 				<div class="app-header__idle-actions">
-					<a class="app-header__cta" href={cta.href}>{cta.label}</a>
+					{showRsvp ? <a class="app-header__cta" href={cta.href}>{cta.label}</a> : null}
 					<button
 						type="button"
 						class="app-header__menu"
@@ -101,6 +105,14 @@ const isCurrent = (href: string): boolean => {
 		};
 		onScroll();
 		window.addEventListener("scroll", onScroll, { passive: true });
+
+		// Desktop groups logo · nav · RSVP with equal gaps; the grid needs the nav's width.
+		const navPanel = root.querySelector("#app-header-menu-panel");
+		if (navPanel instanceof HTMLElement && "ResizeObserver" in window) {
+			new ResizeObserver(() => {
+				root.style.setProperty("--header-nav-w", `${navPanel.offsetWidth}px`);
+			}).observe(navPanel);
+		}
 
 		const openBtn = root.querySelector("#app-header-menu-open");
 		const closeBtn = root.querySelector("#app-header-menu-close");
@@ -323,7 +335,7 @@ const isCurrent = (href: string): boolean => {
 		}
 
 		.app-header__logo-img {
-			height: 2.1rem;
+			--logo-h: 1.875rem;
 		}
 	}
 
@@ -381,6 +393,28 @@ const isCurrent = (href: string): boolean => {
 	.app-header[data-menu-open="true"] .app-header__idle {
 		pointer-events: none;
 		z-index: 4;
+	}
+
+	/* Desktop: logo and RSVP sit an equal distance either side of the centred nav */
+	@media (min-width: 1024px) {
+		.app-header[style*="--header-nav-w"] .app-header__idle {
+			display: grid;
+			grid-template-columns: 1fr var(--header-nav-w) 1fr;
+			column-gap: 2.5rem;
+			align-items: center;
+		}
+
+		.app-header[style*="--header-nav-w"] .app-header__idle .app-header__logo {
+			grid-column: 1;
+			justify-self: end;
+			/* Cancel the link's inner padding so the visible gap matches the RSVP side */
+			margin-inline-end: -0.75rem;
+		}
+
+		.app-header[style*="--header-nav-w"] .app-header__idle .app-header__idle-actions {
+			grid-column: 3;
+			justify-self: start;
+		}
 	}
 
 	.app-header[data-menu-open="true"] .app-header__idle .app-header__logo,
@@ -745,21 +779,63 @@ const isCurrent = (href: string): boolean => {
 		transform: translate(-50%, -50%) rotate(-45deg);
 	}
 
+	@property --logo-h {
+		syntax: "<length>";
+		inherits: true;
+		initial-value: 2rem;
+	}
+
 	.app-header__logo-img {
+		--logo-h: 2rem;
 		display: block;
 		width: auto;
-		height: 2rem;
-		object-fit: contain;
-		transition: height var(--header-transition-duration) var(--header-transition-ease);
+		height: var(--logo-h);
+		transition: --logo-h var(--header-transition-duration) var(--header-transition-ease);
+	}
+
+	/* Monogram logo: brown on light pages, white over the home photo */
+	.app-header__wordmark {
+		display: flex;
+		align-items: center;
+	}
+
+	/* Home page: the header sits on the hero photo until the visitor scrolls */
+	.app-header[data-over-photo]:not([data-scrolled]):not([data-menu-open="true"]) .app-header__monogram--dark {
+		display: none;
+	}
+
+	.app-header[data-over-photo]:not([data-scrolled]):not([data-menu-open="true"]) .app-header__monogram--light {
+		display: block;
+	}
+
+	/* On desktop the nav is always shown, so the header is always "menu open" */
+	@media (min-width: 1024px) {
+		.app-header[data-over-photo]:not([data-scrolled]) .app-header__monogram--dark {
+			display: none;
+		}
+
+		.app-header[data-over-photo]:not([data-scrolled]) .app-header__monogram--light {
+			display: block;
+		}
+	}
+
+	.app-header__monogram {
+		display: block;
+		width: auto;
+		height: var(--logo-h);
+	}
+
+	.app-header__monogram--light {
+		display: none;
 	}
 
 	@media (min-width: 1024px) {
 		.app-header__logo-img {
-			height: 3rem;
+			--logo-h: 2.25rem;
 		}
 
 		.app-header[data-scrolled] .app-header__logo-img {
-			height: 2rem;
+			--logo-h: 1.875rem;
 		}
 	}
 

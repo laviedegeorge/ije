@@ -1,16 +1,20 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import RsvpContent from "@/components/rsvp/RsvpContent.astro";
+import { coupleNames, event } from "@/config/event";
 import { siteTitleSuffix } from "@/data/site-nav";
 
-const coupleNames = "Jane & Jeremiah";
-const rsvpDeadlineLabel = "October 1, 2026";
 const title = `RSVP · ${siteTitleSuffix}`;
-const description = `${coupleNames} — reply by ${rsvpDeadlineLabel} for celebrations in Nigeria (January 2027). Share your attendance and travel details.`;
+const description = `${coupleNames} — reply by ${event.rsvpDeadline.label} for celebrations in ${event.locationLabel} (${event.dateLabel}). Share your attendance and travel details.`;
 const canonicalHref = new URL("/rsvp", Astro.url.origin).href;
 ---
 
-<BaseLayout title={title} description={description} canonicalHref={canonicalHref}>
+<BaseLayout
+	title={title}
+	description={description}
+	canonicalHref={canonicalHref}
+	loader={{ kind: "seal" }}
+>
 	<RsvpContent />
 	<script>
 		import { mountRsvpForm } from "@/components/rsvp/RsvpForm.script";

@@ -6,7 +6,8 @@ import {
 	RSVP_FIELD,
 	validateRsvpForm,
 } from "@/util/rsvpForm";
-import { RSVP_SUBMIT_COPY, submitRsvp } from "@/util/rsvpSubmit";
+import { mountPhoneInput } from "@/components/forms/phoneInput";
+import { RSVP_SUBMIT_COPY, submitRsvpFormData } from "@/util/rsvpSubmit";
 
 const ERROR_IDS = [
 	...Object.values(RSVP_FIELD).map((name) => `rsvp-error-${name}`),
@@ -236,6 +237,9 @@ export const mountRsvpForm = (): void => {
 		throw new Error("RSVP form markup missing");
 	}
 
+	const phoneInput = form.querySelector<HTMLInputElement>(`[name="${RSVP_FIELD.phone}"]`);
+	const phone = phoneInput ? mountPhoneInput(phoneInput) : null;
+
 	syncRsvpSections(form);
 
 	form.addEventListener("change", (e) => {
@@ -253,10 +257,17 @@ export const mountRsvpForm = (): void => {
 		clearErrors(form);
 		syncRsvpSections(form);
 
-		const result = validateRsvpForm(parseRsvpFormData(new FormData(form)));
-		if (!result.ok) {
-			showErrors(form, result.fieldErrors);
-			focusFirstInvalid(form, result.fieldErrors);
+		const formData = new FormData(form);
+		if (phone) formData.set(RSVP_FIELD.phone, phone.value());
+
+		const result = validateRsvpForm(parseRsvpFormData(formData));
+		const fieldErrors = result.ok ? {} : { ...result.fieldErrors };
+		if (phone?.isInvalid()) {
+			fieldErrors[RSVP_FIELD.phone] = "Enter a valid phone number for the country selected.";
+		}
+		if (Object.keys(fieldErrors).length) {
+			showErrors(form, fieldErrors);
+			focusFirstInvalid(form, fieldErrors);
 
 			const summary = form.querySelector("#rsvp-form-summary");
 			if (summary instanceof HTMLElement && !summary.hidden) {
@@ -270,7 +281,7 @@ export const mountRsvpForm = (): void => {
 			submitBtn.textContent = RSVP_SUBMIT_COPY.submitting;
 		}
 
-		const saved = await submitRsvp(form);
+		const saved = await submitRsvpFormData(formData);
 
 		if (submitBtn instanceof HTMLButtonElement) {
 			submitBtn.disabled = false;

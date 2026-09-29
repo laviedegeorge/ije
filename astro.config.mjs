@@ -5,12 +5,13 @@ import { defineConfig } from "astro/config";
 import tailwindcss from "@tailwindcss/vite";
 
 import vercel from "@astrojs/vercel";
+import { event } from "./src/config/event.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://janeandjeremiah.com",
+  site: event.siteUrl,
 
   server: {},
 

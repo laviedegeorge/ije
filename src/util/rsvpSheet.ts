@@ -1,7 +1,11 @@
 import type { CountryResidence, RsvpRecord } from "@/util/rsvpForm";
+import { event } from "@/config/event";
 import { appendRowsToSheet } from "@/util/googleSheetsApi";
+import { sanitizeSheetCell } from "@/util/sheetCell";
 
-const SHEET_NAME = "RSVPs";
+export { sanitizeSheetCell };
+
+const SHEET_NAME = event.sheets.rsvp;
 
 const COUNTRY_LABELS: Record<CountryResidence, string> = {
 	nigeria: "Nigeria",
@@ -11,16 +15,6 @@ const COUNTRY_LABELS: Record<CountryResidence, string> = {
 };
 
 const boolLabel = (value: boolean): string => (value ? "Yes" : "No");
-
-/**
- * Neutralize spreadsheet formula injection: a cell whose first character is
- * one of = + - @ (or a leading tab/CR) is treated as a formula by Google
- * Sheets/Excel. Prefixing a single quote forces the value to be stored as text.
- */
-const FORMULA_TRIGGER_RE = /^[=+\-@\t\r]/;
-
-export const sanitizeSheetCell = (value: string): string =>
-	FORMULA_TRIGGER_RE.test(value) ? `'${value}` : value;
 
 const sanitizeRow = (row: RsvpSheetGuestRow): RsvpSheetGuestRow => {
 	const out: Record<string, string> = {};

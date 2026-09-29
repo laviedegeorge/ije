@@ -1,90 +1,55 @@
 ---
-const expected = import.meta.env.PUBLIC_SITE_GATE_PASSWORD ?? "";
-const enabled = expected.length > 0;
-const ttlMs = 36 * 60 * 60 * 1000;
-const storageKey = "jj_site_unlock_until";
+interface Props {
+	/** Path to return to after unlocking. */
+	next: string;
+	error?: boolean;
+}
+
+const { next, error = false } = Astro.props;
 ---
 
-{
-	enabled ? (
-		<>
-			<div id="site-gate" class="site-gate" aria-hidden="true">
-				<div class="site-gate__backdrop" aria-hidden="true" />
-				<div
-					class="site-gate__panel"
-					role="dialog"
-					aria-modal="true"
-					aria-labelledby="site-gate-label"
-				>
-					<p id="site-gate-label" class="site-gate__label">
-						Password
-					</p>
-					<form id="site-gate-form" class="site-gate__form" autocomplete="off">
-						<div class="site-gate__field-row">
-							<input
-								id="site-gate-input"
-								class="site-gate__input"
-								type="password"
-								name="password"
-								required
-								autocapitalize="off"
-								spellcheck="false"
-							/>
-							<button type="submit" class="site-gate__submit">
-								Submit
-							</button>
-						</div>
-						<p id="site-gate-err" class="site-gate__err" role="status" aria-live="polite" />
-					</form>
-				</div>
+<div class="site-gate">
+	<div class="site-gate__backdrop" aria-hidden="true" />
+	<div
+		class="site-gate__panel"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="site-gate-label"
+	>
+		<img class="site-gate__monogram" src="/assets/monogram-gold.webp" alt="" width="270" height="240" />
+		<label id="site-gate-label" for="site-gate-input" class="site-gate__label">
+			Password
+		</label>
+		<form class="site-gate__form" method="post" action="/api/unlock" autocomplete="off">
+			<input type="hidden" name="next" value={next} />
+			<div class="site-gate__field-row">
+				<input
+					id="site-gate-input"
+					class="site-gate__input"
+					type="password"
+					name="password"
+					required
+					autofocus
+					autocapitalize="off"
+					spellcheck="false"
+				/>
+				<button type="submit" class="site-gate__submit">
+					Submit
+				</button>
 			</div>
-			<script define:vars={{ expected, ttlMs, storageKey }}>
-				(function () {
-					var root = document.getElementById("site-gate");
-					var form = document.getElementById("site-gate-form");
-					var input = document.getElementById("site-gate-input");
-					var errEl = document.getElementById("site-gate-err");
-					if (!root || !form || !input || !errEl) return;
-
-					function clearGate() {
-						document.documentElement.classList.remove("site-gate-open");
-						root.remove();
-					}
-
-					var until = Number(localStorage.getItem(storageKey));
-					if (Number.isFinite(until) && until > Date.now()) {
-						clearGate();
-						return;
-					}
-
-					root.classList.add("site-gate--show");
-					root.setAttribute("aria-hidden", "false");
-					document.documentElement.classList.add("site-gate-open");
-					input.focus();
-
-					form.addEventListener("submit", function (e) {
-						e.preventDefault();
-						errEl.textContent = "";
-						if (input.value === expected) {
-							localStorage.setItem(storageKey, String(Date.now() + ttlMs));
-							clearGate();
-							return;
-						}
-						errEl.textContent = "That did not match.";
-						input.select();
-					});
-				})();
-			</script>
-		</>
-	) : null
-}
+			<p class="site-gate__err" role="status" aria-live="polite">
+				{error ? "That did not match." : null}
+			</p>
+		</form>
+	</div>
+</div>
 
 <style>
 	.site-gate {
 		position: fixed;
 		inset: 0;
 		z-index: 100000;
-		display: none;
+		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
@@ -93,19 +58,18 @@ const storageKey = "jj_site_unlock_until";
 			max(1rem, env(safe-area-inset-right, 0px))
 			max(1rem, env(safe-area-inset-bottom, 0px))
 			max(1rem, env(safe-area-inset-left, 0px));
+		overflow: hidden;
 		font-family: var(--font-body);
-	}
-
-	.site-gate.site-gate--show {
-		display: flex;
 	}
 
 	.site-gate__backdrop {
 		position: absolute;
 		inset: 0;
-		background: rgb(58 46 38 / 0.38);
-		backdrop-filter: blur(12px) saturate(1.12);
-		-webkit-backdrop-filter: blur(12px) saturate(1.12);
+		background:
+			linear-gradient(rgb(58 46 38 / 0.38), rgb(58 46 38 / 0.38)),
+			url("/assets/couple/1.webp") center top / cover no-repeat;
+		filter: blur(12px) saturate(1.12);
+		transform: scale(1.06);
 	}
 
 	.site-gate__panel {
@@ -126,7 +90,16 @@ const storageKey = "jj_site_unlock_until";
 		-webkit-backdrop-filter: blur(10px);
 	}
 
+	.site-gate__monogram {
+		display: block;
+		width: auto;
+		height: 4.5rem;
+		margin: 0.25rem auto 1rem;
+		filter: drop-shadow(0 1px 6px rgb(20 14 10 / 0.25));
+	}
+
 	.site-gate__label {
+		display: block;
 		margin: 0 0 0.5rem;
 		font-size: 0.72rem;
 		font-weight: 650;
@@ -220,12 +193,7 @@ const storageKey = "jj_site_unlock_until";
 
 	@media (prefers-reduced-motion: reduce) {
 		.site-gate__backdrop {
-			backdrop-filter: blur(6px);
-			-webkit-backdrop-filter: blur(6px);
+			filter: blur(6px);
 		}
-	}
-
-	:global(html.site-gate-open) {
-		overflow: hidden;
 	}
 </style>

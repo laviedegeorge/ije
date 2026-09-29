@@ -1,0 +1,331 @@
+---
+/**
+ * Admin view: Asoebi and Groomsmen responses (confirm / decline) and a guest
+ * list summary. Confirming updates the guest's row on the Guests tab.
+ */
+import type { Guest } from "@/util/inviteList";
+import type { InterestResponse } from "@/util/interestSheet";
+
+interface Props {
+	/** null when the tab couldn't be read. */
+	asoebi: InterestResponse[] | null;
+	groomsmen: InterestResponse[] | null;
+	guests: Guest[] | null;
+}
+
+const { asoebi, groomsmen, guests } = Astro.props;
+
+const lists = [
+	{ id: "asoebi", label: "Asoebi", rows: asoebi },
+	{ id: "groomsmen", label: "Groomsmen", rows: groomsmen },
+] as const;
+
+const pendingCount = (rows: InterestResponse[] | null) =>
+	rows?.filter((r) => r.status === "Pending").length ?? 0;
+
+const categories = new Map<string, { people: number; plusOnes: number }>();
+for (const g of guests ?? []) {
+	const key = g.category || "Uncategorised";
+	const entry = categories.get(key) ?? { people: 0, plusOnes: 0 };
+	entry.people += 1;
+	entry.plusOnes += g.plusOne;
+	categories.set(key, entry);
+}
+const totals = [...categories.values()].reduce(
+	(t, c) => ({ people: t.people + c.people, plusOnes: t.plusOnes + c.plusOnes }),
+	{ people: 0, plusOnes: 0 },
+);
+
+const formatDate = (iso: string) => {
+	const d = new Date(iso);
+	return Number.isNaN(d.getTime())
+		? iso
+		: d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Lagos" });
+};
+---
+
+<section class="dash" data-admin-dashboard>
+	<header class="dash__head">
+		<h1 class="dash__title">Admin</h1>
+		<form method="post" action="/api/admin/login">
+			<input type="hidden" name="logout" value="1" />
+			<button type="submit" class="dash__signout">Sign out</button>
+		</form>
+	</header>
+
+	<div class="dash__tabs" role="tablist" aria-label="Lists">
+		{lists.map((list, i) => (
+			<button
+				type="button"
+				role="tab"
+				class="dash__tab"
+				id={`dash-tab-${list.id}`}
+				aria-controls={`dash-panel-${list.id}`}
+				aria-selected={i === 0 ? "true" : "false"}
+				tabindex={i === 0 ? 0 : -1}
+			>
+				{list.label}
+				{pendingCount(list.rows) ? <span class="dash__badge">{pendingCount(list.rows)}</span> : null}
+			</button>
+		))}
+		<button
+			type="button"
+			role="tab"
+			class="dash__tab"
+			id="dash-tab-guests"
+			aria-controls="dash-panel-guests"
+			aria-selected="false"
+			tabindex="-1"
+		>
+			Guest list
+		</button>
+	</div>
+
+	{lists.map((list, i) => (
+		<section class="dash__panel" role="tabpanel" id={`dash-panel-${list.id}`} aria-labelledby={`dash-tab-${list.id}`} hidden={i !== 0}>
+			{list.rows === null ? (
+				<p class="dash__empty">Couldn't read the {list.label} tab. Check the Apps Script setup and reload.</p>
+			) : list.rows.length === 0 ? (
+				<p class="dash__empty">No responses yet.</p>
+			) : (
+				<ul class="dash__responses">
+					{list.rows.map((r) => (
+						<li class="dash__response" data-list={list.id} data-submitted-at={r.submittedAt} data-code={r.code} data-status={r.status}>
+							<div class="dash__who">
+								<p class="dash__name">{r.name}</p>
+								<p class="dash__meta">
+									{r.events} · {formatDate(r.submittedAt)} · {r.code}
+								</p>
+								<p class="dash__meta">
+									<a href={`mailto:${r.email}`}>{r.email}</a> ·{" "}
+									<a href={`https://wa.me/${r.whatsapp.replace(/\D/g, "").replace(/^0/, "234")}`} target="_blank" rel="noopener noreferrer">{r.whatsapp}</a>
+								</p>
+							</div>
+							<div class="dash__actions">
+								<span class="dash__status" data-status-label>{r.status}</span>
+								<button type="button" class="dash__action dash__action--confirm" data-set-status="Confirmed">Confirm</button>
+								<button type="button" class="dash__action" data-set-status="Declined">Decline</button>
+							</div>
+						</li>
+					))}
+				</ul>
+			)}
+		</section>
+	))}
+
+	<section class="dash__panel" role="tabpanel" id="dash-panel-guests" aria-labelledby="dash-tab-guests" hidden>
+		{guests === null ? (
+			<p class="dash__empty">Couldn't read the Guests tab. Check the Apps Script setup and reload.</p>
+		) : (
+			<>
+				<table class="dash__table">
+					<thead>
+						<tr><th>Category</th><th>Guests</th><th>Plus ones</th><th>Total</th></tr>
+					</thead>
+					<tbody>
+						{[...categories.entries()].map(([name, c]) => (
+							<tr><td>{name}</td><td>{c.people}</td><td>{c.plusOnes}</td><td>{c.people + c.plusOnes}</td></tr>
+						))}
+					</tbody>
+					<tfoot>
+						<tr><th>All</th><th>{totals.people}</th><th>{totals.plusOnes}</th><th>{totals.people + totals.plusOnes}</th></tr>
+					</tfoot>
+				</table>
+
+				<table class="dash__table dash__table--guests">
+					<thead>
+						<tr><th>Name</th><th>Category</th><th>Source</th><th>Plus one</th></tr>
+					</thead>
+					<tbody>
+						{guests.map((g) => (
+							<tr><td>{g.name}</td><td>{g.category}</td><td>{g.source || "Direct"}</td><td>{g.plusOne || ""}</td></tr>
+						))}
+					</tbody>
+				</table>
+			</>
+		)}
+	</section>
+</section>
+
+<script>
+	import { mountAdminDashboard } from "@/components/admin/AdminDashboard.script";
+
+	mountAdminDashboard();
+</script>
+
+<style>
+	.dash {
+		max-width: 60rem;
+		margin: 0 auto;
+	}
+
+	.dash__head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 1.25rem;
+	}
+
+	.dash__title {
+		margin: 0;
+		font-size: clamp(2rem, 5vw, 2.75rem);
+		font-weight: 400;
+	}
+
+	.dash__signout {
+		border: none;
+		background: none;
+		color: var(--text-muted);
+		font: inherit;
+		text-decoration: underline;
+		cursor: pointer;
+	}
+
+	.dash__tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+		width: fit-content;
+		margin-bottom: 1.25rem;
+		padding: 0.3rem;
+		border-radius: 9999px;
+		background: rgb(255 255 255 / 0.55);
+		border: 1px solid rgb(255 255 255 / 0.8);
+	}
+
+	.dash__tab {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.55rem 1.1rem;
+		border: none;
+		border-radius: 9999px;
+		background: transparent;
+		color: var(--text-muted);
+		font: inherit;
+		font-size: 0.9rem;
+		font-weight: 700;
+		cursor: pointer;
+	}
+
+	.dash__tab[aria-selected="true"] {
+		background: #6e523c;
+		color: #fffcf7;
+	}
+
+	.dash__badge {
+		min-width: 1.3rem;
+		padding: 0 0.35rem;
+		border-radius: 9999px;
+		background: #c9a87c;
+		color: #3a2e26;
+		font-size: 0.75rem;
+		line-height: 1.3rem;
+		text-align: center;
+	}
+
+	.dash__empty {
+		color: var(--text-muted);
+	}
+
+	.dash__responses {
+		display: grid;
+		gap: 0.75rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.dash__response {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem 1.5rem;
+		padding: 1rem 1.25rem;
+		border-radius: 1rem;
+		background: rgb(255 255 255 / 0.6);
+		border: 1px solid rgb(255 255 255 / 0.8);
+	}
+
+	.dash__name {
+		margin: 0 0 0.2rem;
+		font-weight: 700;
+	}
+
+	.dash__meta {
+		margin: 0;
+		font-size: 0.85rem;
+		color: var(--text-muted);
+	}
+
+	.dash__meta a {
+		color: inherit;
+	}
+
+	.dash__actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.dash__status {
+		min-width: 5.5rem;
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: rgb(110 82 60 / 0.85);
+	}
+
+	.dash__response[data-status="Confirmed"] .dash__status {
+		color: rgb(60 110 60);
+	}
+
+	.dash__response[data-status="Declined"] .dash__status {
+		color: rgb(150 45 35);
+	}
+
+	.dash__action {
+		padding: 0.45rem 0.9rem;
+		border-radius: 9999px;
+		border: 1px solid rgb(110 82 60 / 0.35);
+		background: transparent;
+		color: var(--text-primary);
+		font: inherit;
+		font-size: 0.85rem;
+		font-weight: 700;
+		cursor: pointer;
+	}
+
+	.dash__action--confirm {
+		background: #6e523c;
+		color: #fffcf7;
+	}
+
+	.dash__action[disabled] {
+		opacity: 0.45;
+		cursor: default;
+	}
+
+	.dash__table {
+		width: 100%;
+		margin-bottom: 1.5rem;
+		border-collapse: collapse;
+		font-size: 0.9rem;
+		background: rgb(255 255 255 / 0.6);
+		border-radius: 1rem;
+		overflow: hidden;
+	}
+
+	.dash__table th,
+	.dash__table td {
+		padding: 0.6rem 1rem;
+		text-align: left;
+		border-bottom: 1px solid rgb(110 82 60 / 0.12);
+	}
+
+	.dash__table tfoot th {
+		border-bottom: none;
+	}
+</style>

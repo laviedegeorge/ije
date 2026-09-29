@@ -1,12 +1,12 @@
 /// <reference types="astro/client" />
 
 interface ImportMetaEnv {
-	readonly PUBLIC_SITE_GATE_PASSWORD?: string;
-	readonly GOOGLE_SPREADSHEET_ID?: string;
-	readonly GOOGLE_SERVICE_ACCOUNT_EMAIL?: string;
-	readonly GOOGLE_PRIVATE_KEY?: string;
-	readonly TRAIN_NAMES?: string;
-	readonly GROOMSMEN_NAMES?: string;
+	readonly SITE_GATE_PASSWORD?: string;
+	/** Apps Script web app URL (…/exec) and the SITE_SECRET set in its script properties */
+	readonly APPS_SCRIPT_URL?: string;
+	readonly APPS_SCRIPT_SECRET?: string;
+	/** Code for the /admin page (confirm asoebi / groomsmen, guest list) */
+	readonly ADMIN_CODE?: string;
 }
 
 interface ImportMeta {

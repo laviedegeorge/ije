@@ -1,4 +1,5 @@
 ---
+import { event } from "@/config/event";
 import ContentCard from "@/components/ContentCard.astro";
 import HeroPageSurface from "@/components/HeroPageSurface.astro";
 import TravelPageIntro from "@/components/travel/TravelPageIntro.astro";
@@ -50,7 +51,7 @@ const {
 			<img
 				class="about-wedding-party__image"
 				src={bgSrc}
-				alt="Jane and Jeremiah dancing at their wedding celebration"
+				alt={`${event.partnerOne.firstName} and ${event.partnerTwo.firstName} dancing at their wedding celebration`}
 				loading="eager"
 			/>
 		</ContentCard>
