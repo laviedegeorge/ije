@@ -1,0 +1,35 @@
+---
+import "@/styles/global.css";
+import SiteGate from "@/components/SiteGate.astro";
+import { coupleNames } from "@/config/event";
+import { getGatePassword, safeNextPath } from "@/util/siteGate";
+
+export const prerender = false;
+
+const next = safeNextPath(Astro.url.searchParams.get("next"));
+if (!getGatePassword()) {
+	return Astro.redirect(next, 303);
+}
+
+const error = Astro.url.searchParams.has("error");
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex" />
+		<link rel="icon" href="/favicon.ico" sizes="any" />
+		<title>{coupleNames}</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&display=swap"
+			rel="stylesheet"
+		/>
+	</head>
+	<body>
+		<SiteGate next={next} error={error} />
+	</body>
+</html>

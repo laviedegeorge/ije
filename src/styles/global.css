@@ -53,7 +53,8 @@ h3 {
   z-index: 1;
   min-height: 100vh;
   min-height: 100dvh;
-  margin-bottom: 42dvh;
+  /* Reveal the whole fixed footer (its height minus the rounded overlap) */
+  margin-bottom: calc(var(--site-footer-reveal) - var(--footer-overlap));
   border-radius: 0 0 2.5rem 2.5rem;
   overflow: clip;
   box-shadow: 0 8px 32px -4px rgb(18 10 4 / 0.22);
@@ -143,4 +144,43 @@ html.coming-soon-page .site-shell {
     translate: 0 0;
     transition: none;
   }
+}
+
+/* Phone fields (intl-tel-input, see src/components/forms/phoneInput.ts) */
+.phone-input {
+  display: block;
+  width: 100%;
+  --iti-hover-color: rgb(110 82 60 / 0.08);
+  --iti-border-color: rgb(110 82 60 / 0.22);
+  --iti-icon-color: rgb(110 82 60 / 0.7);
+}
+
+.phone-input .iti__dropdown-content {
+  background-color: #fffcf7;
+}
+
+.phone-input .iti__selected-country {
+  border-radius: 0.55rem 0 0 0.55rem;
+}
+
+/* Country search: same focus treatment as .form-field__control (tan border, no
+   browser outline). Unscoped because on phones the list moves into the dialog. */
+.iti__search-input:focus,
+.iti__search-input:focus-visible {
+  outline: none;
+}
+
+.iti__search-input-wrapper {
+  border-bottom: 1px solid rgb(110 82 60 / 0.22);
+  transition: border-color 150ms ease;
+}
+
+.iti__search-input-wrapper:focus-within {
+  border-bottom-color: #c9a87c;
+}
+
+.phone-input .iti__dropdown-content {
+  border-radius: 0.55rem;
+  font-family: var(--font-body);
+  color: var(--text-primary);
 }

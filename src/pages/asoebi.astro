@@ -1,19 +1,32 @@
 ---
+export const prerender = false;
+
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import AsoEbiContent from "@/components/asoebi/AsoEbiContent.astro";
+import InterestPage from "@/components/interest/InterestPage.astro";
+import { coupleNames } from "@/config/event";
+import { asoebiPageContent } from "@/data/interestPages";
 import { siteTitleSuffix } from "@/data/site-nav";
+import { resolveInvitee } from "@/util/inviteList";
+
+// Personal links look like ?n=ada&c=K7Q2M9 — the code grants access, the name personalises.
+const linkName = Astro.url.searchParams.get("n")?.trim() ?? "";
+const linkCode = Astro.url.searchParams.get("c")?.trim() ?? "";
+const invitee = await resolveInvitee("asoebi", linkCode, linkName);
 
 const title = `Asoebi · ${siteTitleSuffix}`;
-const description =
-  "Dress code, color palette, and fabric guide for each wedding celebration — Traditional Marriage and Church Wedding.";
-const canonicalHref = new URL("/asoebi", Astro.url.origin).href;
-
+const description = `Asoebi for ${coupleNames}'s Traditional Marriage and White Wedding.`;
 ---
 
 <BaseLayout
-  title={title}
-  description={description}
-  canonicalHref={canonicalHref}
+	title={title}
+	description={description}
+	loader={invitee ? { kind: "seal", guestName: invitee.name } : undefined}
 >
-  <AsoEbiContent />
+	<meta slot="head" name="robots" content="noindex" />
+	<InterestPage
+		content={asoebiPageContent}
+		endpoint="/api/asoebi"
+		invitee={invitee}
+		idPrefix="asoebi"
+	/>
 </BaseLayout>

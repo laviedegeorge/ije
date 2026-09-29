@@ -1,0 +1,82 @@
+---
+/** In-layout "coming soon" card for pages listed in `event.comingSoon`. */
+import ContentCard from "@/components/ContentCard.astro";
+import HeroPageSurface from "@/components/HeroPageSurface.astro";
+
+interface Props {
+	eyebrow: string;
+	title: string;
+	message: string;
+}
+
+const { eyebrow, title, message } = Astro.props;
+---
+
+<HeroPageSurface bgSrc="/assets/rsvp.webp" surfaceClass="coming-soon-notice" ariaLabelledBy="coming-soon-title">
+	<ContentCard variant="secondary" class="coming-soon-notice__card" data-reveal>
+		<p class="coming-soon-notice__eyebrow">{eyebrow}</p>
+		<h1 id="coming-soon-title" class="coming-soon-notice__title">{title}</h1>
+		<p class="coming-soon-notice__tag">Coming soon</p>
+		<p class="coming-soon-notice__message">{message}</p>
+		<a class="coming-soon-notice__link" href="/schedule">See the schedule</a>
+	</ContentCard>
+</HeroPageSurface>
+
+<style>
+	:global(.content-card.coming-soon-notice__card) {
+		max-width: 32rem;
+		margin: clamp(2rem, 8vh, 5rem) auto;
+		text-align: center;
+	}
+
+	.coming-soon-notice__eyebrow {
+		margin: 0 0 0.65rem;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: rgb(92 74 61 / 0.75);
+	}
+
+	.coming-soon-notice__title {
+		margin: 0;
+		font-size: clamp(2.25rem, 6vw, 3.25rem);
+		font-weight: 400;
+		line-height: 1.1;
+	}
+
+	.coming-soon-notice__tag {
+		display: inline-block;
+		margin: 1rem 0 0;
+		padding: 0.35rem 0.9rem;
+		border-radius: 9999px;
+		background: rgb(201 168 124 / 0.28);
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: #6e523c;
+	}
+
+	.coming-soon-notice__message {
+		margin: 1rem 0 1.5rem;
+		line-height: 1.6;
+		color: var(--text-muted);
+	}
+
+	.coming-soon-notice__link {
+		display: inline-block;
+		padding: 0.65rem 1.4rem;
+		border-radius: 9999px;
+		border: 1px solid rgb(110 82 60 / 0.35);
+		color: var(--text-primary);
+		font-weight: 700;
+		font-size: 0.9rem;
+		text-decoration: none;
+	}
+
+	.coming-soon-notice__link:focus-visible {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: 3px;
+	}
+</style>

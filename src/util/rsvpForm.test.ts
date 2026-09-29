@@ -114,11 +114,21 @@ describe("validateRsvpForm", () => {
 		expect(result.ok).toBe(true);
 	});
 
-	it("requires international travel fields for UK guests", () => {
+	it("allows UK guests to leave travel dates blank", () => {
 		const form = fd({
 			[RSVP_FIELD.countryResidence]: "uk",
 			[RSVP_FIELD.expectedArrival]: "",
 			[RSVP_FIELD.expectedDeparture]: "",
+		});
+		const result = validateRsvpForm(parseRsvpFormData(form));
+		expect(result.ok).toBe(true);
+	});
+
+	it("rejects malformed travel dates for UK guests", () => {
+		const form = fd({
+			[RSVP_FIELD.countryResidence]: "uk",
+			[RSVP_FIELD.expectedArrival]: "Jan 2",
+			[RSVP_FIELD.expectedDeparture]: "2027/01/10",
 		});
 		const result = validateRsvpForm(parseRsvpFormData(form));
 		expect(result.ok).toBe(false);

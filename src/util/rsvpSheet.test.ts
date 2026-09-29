@@ -98,6 +98,17 @@ describe("sanitizeSheetCell", () => {
 		}
 	});
 
+	it("still flags + and - when followed by a function", () => {
+		expect(sanitizeSheetCell("+HYPERLINK(1)")).toBe("'+HYPERLINK(1)");
+		expect(sanitizeSheetCell("-cmd|x")).toBe("'-cmd|x");
+	});
+
+	it("leaves phone numbers alone", () => {
+		expect(sanitizeSheetCell("+234 803 123 4567")).toBe("+234 803 123 4567");
+		expect(sanitizeSheetCell("+2348031234567")).toBe("+2348031234567");
+		expect(sanitizeSheetCell("+1 (214) 577-1936")).toBe("+1 (214) 577-1936");
+	});
+
 	it("does not touch safe values", () => {
 		expect(sanitizeSheetCell("Ada")).toBe("Ada");
 		expect(sanitizeSheetCell("a+b")).toBe("a+b");

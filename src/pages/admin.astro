@@ -1,0 +1,124 @@
+---
+export const prerender = false;
+
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import AdminDashboard from "@/components/admin/AdminDashboard.astro";
+import ContentCard from "@/components/ContentCard.astro";
+import { event } from "@/config/event";
+import { siteTitleSuffix } from "@/data/site-nav";
+import { getAdminCode, isAdmin } from "@/util/adminAuth";
+import { readSheetValues } from "@/util/googleSheetsApi";
+import { loadGuests, type Guest } from "@/util/inviteList";
+import { parseResponseRows, type InterestResponse } from "@/util/interestSheet";
+
+Astro.response.headers.set("Cache-Control", "no-store");
+
+const configured = Boolean(getAdminCode());
+const signedIn = configured && isAdmin(Astro.cookies);
+const error = Astro.url.searchParams.has("error");
+
+let data: {
+	asoebi: InterestResponse[] | null;
+	groomsmen: InterestResponse[] | null;
+	guests: Guest[] | null;
+} | null = null;
+if (signedIn) {
+	const [asoebi, groomsmen, guests] = await Promise.all([
+		readSheetValues(event.sheets.asoebi),
+		readSheetValues(event.sheets.groomsmen),
+		loadGuests({ fresh: true }),
+	]);
+	data = {
+		asoebi: asoebi.ok ? parseResponseRows(asoebi.values) : null,
+		groomsmen: groomsmen.ok ? parseResponseRows(groomsmen.values) : null,
+		guests,
+	};
+}
+---
+
+<BaseLayout title={`Admin · ${siteTitleSuffix}`}>
+	<meta slot="head" name="robots" content="noindex, nofollow" />
+	<main class="admin wrapper">
+		{
+			!configured ? (
+				<ContentCard variant="secondary" class="admin__card">
+					<h1 class="admin__title">Admin isn't set up</h1>
+					<p class="admin__copy">Set <code>ADMIN_CODE</code> in the environment to turn on this page.</p>
+				</ContentCard>
+			) : !signedIn ? (
+				<ContentCard variant="secondary" class="admin__card">
+					<h1 class="admin__title">Admin</h1>
+					<form class="admin__login" method="post" action="/api/admin/login">
+						<label class="admin__label" for="admin-code">Admin code</label>
+						<input id="admin-code" class="admin__input" type="password" name="code" required autofocus autocomplete="current-password" />
+						{error ? <p class="admin__error" role="alert">That code didn't match.</p> : null}
+						<button type="submit" class="admin__button">Sign in</button>
+					</form>
+				</ContentCard>
+			) : (
+				data && <AdminDashboard {...data} />
+			)
+		}
+	</main>
+</BaseLayout>
+
+<style>
+	.admin {
+		padding-top: clamp(6.75rem, 13vw, 9rem);
+		padding-bottom: clamp(3rem, 7vw, 6rem);
+	}
+
+	:global(.content-card.admin__card) {
+		max-width: 24rem;
+		margin: 0 auto;
+	}
+
+	.admin__title {
+		margin: 0 0 1rem;
+		font-size: 2rem;
+		font-weight: 400;
+	}
+
+	.admin__copy {
+		margin: 0;
+		line-height: 1.6;
+		color: var(--text-muted);
+	}
+
+	.admin__login {
+		display: grid;
+		gap: 0.6rem;
+	}
+
+	.admin__label {
+		font-size: 0.84rem;
+		font-weight: 600;
+	}
+
+	.admin__input {
+		padding: 0.72rem 0.95rem;
+		border-radius: 0.55rem;
+		border: 1px solid rgb(110 82 60 / 0.22);
+		background: rgb(255 252 247 / 0.92);
+		font: inherit;
+		font-size: 1.05rem;
+	}
+
+	.admin__error {
+		margin: 0;
+		font-size: 0.85rem;
+		color: rgb(150 45 35);
+	}
+
+	.admin__button {
+		margin-top: 0.5rem;
+		padding: 0.7rem 1.5rem;
+		border-radius: 9999px;
+		border: none;
+		background: #6e523c;
+		color: #fffcf7;
+		font: inherit;
+		font-weight: 700;
+		cursor: pointer;
+	}
+</style>

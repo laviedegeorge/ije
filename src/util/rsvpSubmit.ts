@@ -40,7 +40,7 @@ export const submitRsvpFormData = async (
 	if (response.status === 503 && data?.kind === "not_configured") {
 		if (import.meta.env.DEV) {
 			console.warn(
-				"[RSVP] GOOGLE_SPREADSHEET_ID is not set — submissions will fail until it is configured (see .env.example).",
+				"[RSVP] APPS_SCRIPT_URL / APPS_SCRIPT_SECRET are not set — submissions will fail until they are configured (see .env.example).",
 			);
 		}
 		return { ok: false, kind: "not_configured", message: RSVP_SUBMIT_COPY.notConfigured };
@@ -60,6 +60,3 @@ export const submitRsvpFormData = async (
 
 	return { ok: true };
 };
-
-export const submitRsvp = (form: HTMLFormElement): Promise<RsvpClientSubmitResult> =>
-	submitRsvpFormData(new FormData(form));

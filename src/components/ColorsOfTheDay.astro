@@ -1,0 +1,83 @@
+---
+import type { ColorOfTheDay } from "@/data/schedule";
+
+interface Props {
+	colors: ColorOfTheDay[];
+	label?: string;
+	class?: string;
+}
+
+const { colors, label = "Colours of the day", class: className } = Astro.props;
+---
+
+{
+	colors.length ? (
+		<div class:list={["colors-of-the-day", className]}>
+			<p class="colors-of-the-day__label">{label}</p>
+			<ul class="colors-of-the-day__list">
+				{colors.map((color) => (
+					<li class="colors-of-the-day__item">
+						<span
+							class="colors-of-the-day__swatch"
+							style={`background-color: ${color.hex}`}
+							aria-hidden="true"
+						/>
+						<span class="colors-of-the-day__name">{color.name}</span>
+					</li>
+				))}
+			</ul>
+		</div>
+	) : null
+}
+
+<style>
+	.colors-of-the-day {
+		margin: 1rem 0 0.9rem;
+	}
+
+	.colors-of-the-day__label {
+		margin: 0 0 0.6rem;
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: rgb(110 82 60 / 0.82);
+	}
+
+	/* Each colour is a box with its name centred underneath; rows wrap on narrow screens */
+	.colors-of-the-day__list {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 0.75rem 1rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.colors-of-the-day__item {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.4rem;
+		min-width: 3.25rem;
+	}
+
+	.colors-of-the-day__swatch {
+		width: 2.5rem;
+		height: 1.6rem;
+		border-radius: 0.25rem;
+		/* Outline keeps the light boxes (tan, gold) visible on pale backgrounds */
+		box-shadow: inset 0 0 0 1px rgb(58 46 38 / 0.15);
+	}
+
+	.colors-of-the-day__name {
+		font-size: 0.62rem;
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		line-height: 1.25;
+		text-align: center;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+</style>

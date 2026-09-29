@@ -1,0 +1,24 @@
+---
+export const prerender = false;
+
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import ComingSoonNotice from "@/components/ComingSoonNotice.astro";
+import { event } from "@/config/event";
+import { siteTitleSuffix } from "@/data/site-nav";
+
+// Once the registry is live, this page just forwards to it.
+if (!event.comingSoon.includes("registry") && event.registryHref) {
+	return Astro.redirect(event.registryHref, 302);
+}
+---
+
+<BaseLayout
+	title={`Registry · ${siteTitleSuffix}`}
+	loader={{ kind: "curtain", title: "Registry", photo: "/assets/loaders/registry.webp" }}
+>
+	<ComingSoonNotice
+		eyebrow="Registry"
+		title="Gifts & Registry"
+		message="Your presence is the greatest gift. For those who have asked, our registry details will be shared here soon."
+	/>
+</BaseLayout>

@@ -1,0 +1,385 @@
+---
+/**
+ * Full-screen page loader. Each page picks one through BaseLayout's `loader` prop:
+ *   welcome  Home: "Welcome" → "Nnọọ" → names over a photo, with a counter (once per visit)
+ *   seal     RSVP and invite pages: a wax-sealed envelope opens (once per visit per page)
+ *   curtain  Other pages: the page name over a photo, then it lifts (every time)
+ * All three share the gold line, the timing curve and the upward exit. Visitors who
+ * reduce motion skip them; a tap or key press ends one early.
+ */
+import type { LoaderConfig } from "@/components/loader/loaderConfig";
+import { coupleNames, event } from "@/config/event";
+
+interface Props {
+	loader: LoaderConfig;
+}
+
+const { loader } = Astro.props;
+
+/** Milliseconds until the loader is fully gone; the script removes it then. */
+const DURATION_MS = { welcome: 5350, seal: 4150, curtain: 1950 } as const;
+
+// Once-per-visit loaders remember they've played for this page; the curtain always plays.
+const seenKey = loader.kind === "curtain" ? "" : `loader-seen:${loader.kind}:${Astro.url.pathname}`;
+const guestFirstName = loader.kind === "seal" ? (loader.guestName ?? "").trim().split(/\s+/)[0] : "";
+const photo = loader.kind === "seal" ? "" : loader.photo;
+// "Owerri · December 2026"
+const monthYear = new Date(event.countdownTarget).toLocaleString("en-GB", { month: "long", year: "numeric" });
+const place = event.locationLabel.split(",")[0];
+---
+
+<script is:inline define:vars={{ seenKey }}>
+	(function () {
+		var root = document.documentElement;
+		try {
+			// A reload replays it; only returning to the page by clicking around the site skips it.
+			var nav = performance.getEntriesByType("navigation")[0];
+			var reloaded = nav ? nav.type === "reload" : false;
+			var seen = seenKey && !reloaded && sessionStorage.getItem(seenKey);
+			if (matchMedia("(prefers-reduced-motion: reduce)").matches || seen) {
+				root.classList.add("page-loader-skip");
+				return;
+			}
+		} catch (e) {}
+		root.classList.add("page-loader-active");
+	})();
+</script>
+
+<div
+	class:list={["page-loader", `page-loader--${loader.kind}`]}
+	data-page-loader
+	data-duration={DURATION_MS[loader.kind]}
+	data-seen-key={seenKey}
+	style={photo ? `--loader-photo: url("${photo}")` : undefined}
+	aria-hidden="true"
+>
+	{
+		loader.kind === "welcome" && (
+			<>
+				<div class="pl-word">Welcome</div>
+				<div class="pl-word">
+					<div>
+						Nnọọ<small>Welcome, in Igbo</small>
+					</div>
+				</div>
+				<div class="pl-word">
+					<div>
+						{coupleNames}
+						<small>{place} · {monthYear}</small>
+					</div>
+				</div>
+				<div class="pl-bar" />
+				<div class="pl-count" data-loader-count>00</div>
+			</>
+		)
+	}
+	{
+		loader.kind === "seal" && (
+			<div class="pl-env">
+				<div class="pl-env-back" />
+				<div class="pl-env-card">
+					<div>
+						{guestFirstName ? <div class="pl-for">For {guestFirstName}</div> : null}
+						<div class="pl-names">{coupleNames}</div>
+						<div class="pl-date">{event.dateLabel}</div>
+						<div class="pl-line" />
+					</div>
+				</div>
+				<div class="pl-env-front" />
+				<div class="pl-env-flap" />
+				<div class="pl-wax">
+					<img src="/assets/monogram-gold.webp" alt="" width="270" height="240" />
+				</div>
+			</div>
+		)
+	}
+	{
+		loader.kind === "curtain" && (
+			<>
+				<div class="pl-title">{loader.title}</div>
+				<div class="pl-rule" />
+			</>
+		)
+	}
+</div>
+
+<script>
+	import { mountPageLoader } from "@/components/loader/PageLoader.script";
+
+	mountPageLoader();
+</script>
+
+<style is:global>
+	html.page-loader-active {
+		overflow: hidden;
+	}
+
+	html.page-loader-skip .page-loader {
+		display: none;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.page-loader {
+			display: none;
+		}
+	}
+
+	.page-loader {
+		--pl-ease-exit: cubic-bezier(0.7, 0, 0.2, 1);
+		--pl-scrim: rgb(24 15 8 / 0.62);
+		--pl-champagne: #deba7e;
+		--pl-gold: #c9a87c;
+		position: fixed;
+		inset: 0;
+		z-index: 2147483000;
+		overflow: hidden;
+		cursor: pointer;
+		font-family: var(--font-body);
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	/* Exit is always the whole overlay lifting away. */
+	.page-loader--welcome {
+		animation: pl-lift 1s 4.3s var(--pl-ease-exit) forwards;
+	}
+	.page-loader--seal {
+		animation: pl-lift 0.7s 3.4s var(--pl-ease-exit) forwards;
+	}
+	.page-loader--curtain {
+		animation: pl-lift 0.7s 1.2s var(--pl-ease-exit) forwards;
+	}
+	.page-loader.page-loader--skipping {
+		animation: pl-lift 0.45s var(--pl-ease-exit) forwards;
+	}
+
+	@keyframes pl-lift {
+		to {
+			translate: 0 -100%;
+		}
+	}
+	@keyframes pl-fade-in {
+		to {
+			opacity: 1;
+		}
+	}
+	@keyframes pl-grow {
+		to {
+			scale: 1 1;
+		}
+	}
+
+	/* ── Welcome (home) ── */
+	.page-loader--welcome,
+	.page-loader--curtain {
+		background:
+			linear-gradient(var(--pl-scrim), var(--pl-scrim)),
+			var(--loader-photo) center 25% / cover no-repeat,
+			#2b2420;
+		color: #f6efe4;
+	}
+	.page-loader .pl-word {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center;
+		padding-inline: 1.5rem;
+		text-align: center;
+		font-family: var(--font-heading);
+		font-size: clamp(3rem, 10vw, 7.5rem);
+		line-height: 1.05;
+		opacity: 0;
+		text-shadow: 0 0.2em 1.5em rgb(0 0 0 / 0.35);
+	}
+	.page-loader .pl-word small {
+		display: block;
+		margin-top: 0.9rem;
+		font-family: var(--font-body);
+		font-size: clamp(0.65rem, 1.4vw, 0.85rem);
+		font-weight: 700;
+		letter-spacing: 0.3em;
+		text-transform: uppercase;
+		color: var(--pl-champagne);
+		text-shadow: none;
+	}
+	.page-loader .pl-word:nth-child(1) {
+		animation: pl-word 1.4s 0.2s both;
+	}
+	.page-loader .pl-word:nth-child(2) {
+		animation: pl-word 1.4s 1.4s both;
+	}
+	.page-loader .pl-word:nth-child(3) {
+		animation: pl-word-stay 0.9s 2.6s both;
+	}
+	@keyframes pl-word {
+		0% { opacity: 0; translate: 0 12%; }
+		25%, 70% { opacity: 1; translate: 0 0; }
+		100% { opacity: 0; translate: 0 -8%; }
+	}
+	@keyframes pl-word-stay {
+		from { opacity: 0; translate: 0 10%; }
+		to { opacity: 1; translate: 0 0; }
+	}
+	.page-loader .pl-bar {
+		position: absolute;
+		left: clamp(1.25rem, 5vw, 3rem);
+		right: calc(clamp(1.25rem, 5vw, 3rem) + 5.5rem);
+		bottom: calc(clamp(1.75rem, 5vw, 3rem) + env(safe-area-inset-bottom, 0px));
+		height: 1px;
+		background: rgb(246 239 228 / 0.25);
+	}
+	.page-loader .pl-bar::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		background: var(--pl-champagne);
+		transform-origin: left;
+		scale: 0 1;
+		animation: pl-grow 4s 0.1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+	}
+	.page-loader .pl-count {
+		position: absolute;
+		right: clamp(1.25rem, 5vw, 3rem);
+		bottom: calc(clamp(1rem, 4vw, 2.2rem) + env(safe-area-inset-bottom, 0px));
+		font-family: var(--font-heading);
+		font-size: clamp(2rem, 5vw, 3.5rem);
+		line-height: 1;
+		font-variant-numeric: tabular-nums;
+		color: var(--pl-champagne);
+	}
+
+	/* ── Seal (RSVP and invites) ── */
+	.page-loader--seal {
+		background: radial-gradient(ellipse 70% 60% at 50% 45%, #f6efe4, #e6dccd);
+		perspective: 1000px;
+	}
+	.page-loader .pl-env {
+		position: absolute;
+		left: 50%;
+		top: 52%;
+		width: min(86vw, 34rem);
+		aspect-ratio: 1.55;
+		translate: -50% -50%;
+		animation: pl-env-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+	}
+	@keyframes pl-env-in {
+		from { opacity: 0; translate: -50% -40%; }
+		to { opacity: 1; translate: -50% -50%; }
+	}
+	.page-loader .pl-env-back {
+		position: absolute;
+		inset: 0;
+		border-radius: 0.5rem;
+		background: #e9dcc7;
+		box-shadow: 0 1.5rem 3.5rem rgb(58 46 38 / 0.25);
+	}
+	.page-loader .pl-env-card {
+		position: absolute;
+		inset: 8% 6%;
+		display: grid;
+		place-items: center;
+		padding: 1.5rem;
+		border-radius: 0.35rem;
+		background: #fffaf2;
+		box-shadow: 0 0.3rem 0.9rem rgb(58 46 38 / 0.15);
+		text-align: center;
+		animation: pl-card-rise 0.8s 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+	}
+	@keyframes pl-card-rise {
+		to { translate: 0 -36%; z-index: 5; }
+	}
+	.page-loader .pl-for {
+		margin-bottom: 0.4rem;
+		font-family: var(--font-heading);
+		font-style: italic;
+		font-size: clamp(0.95rem, 3vw, 1.2rem);
+		color: #6e523c;
+	}
+	.page-loader .pl-names {
+		font-family: var(--font-heading);
+		font-size: clamp(1.5rem, 6vw, 2.4rem);
+		line-height: 1.1;
+		color: #3a2e26;
+	}
+	.page-loader .pl-date {
+		margin-top: 0.5rem;
+		font-size: clamp(0.55rem, 1.8vw, 0.72rem);
+		font-weight: 700;
+		letter-spacing: 0.24em;
+		text-transform: uppercase;
+		color: #6e523c;
+	}
+	.page-loader .pl-line {
+		width: 5rem;
+		height: 1px;
+		margin: 0.7rem auto 0;
+		background: var(--pl-gold);
+	}
+	.page-loader .pl-env-front {
+		position: absolute;
+		inset: 0;
+		border-radius: 0.5rem;
+		background: linear-gradient(160deg, #efe3cf, #e2d3bb);
+		clip-path: polygon(0 0, 50% 56%, 100% 0, 100% 100%, 0 100%);
+	}
+	.page-loader .pl-env-flap {
+		position: absolute;
+		inset: 0 0 auto 0;
+		z-index: 3;
+		height: 58%;
+		background: linear-gradient(180deg, #e6d6bd, #dac7a9);
+		clip-path: polygon(0 0, 100% 0, 50% 100%);
+		transform-origin: top;
+		backface-visibility: hidden;
+		animation: pl-flap 0.65s 1.2s cubic-bezier(0.5, 0, 0.3, 1) forwards;
+	}
+	@keyframes pl-flap {
+		to { transform: rotateX(180deg); }
+	}
+	.page-loader .pl-wax {
+		position: absolute;
+		left: 50%;
+		top: 56%;
+		z-index: 4;
+		display: grid;
+		place-items: center;
+		width: 24%;
+		aspect-ratio: 1;
+		translate: -50% -50%;
+		border-radius: 50%;
+		background: radial-gradient(circle at 35% 30%, #9a3446, #6d1f2f 55%, #4a1420);
+		box-shadow: 0 0.35rem 0.9rem rgb(40 10 15 / 0.45), inset 0 0 0 0.35rem rgb(255 255 255 / 0.06);
+		animation: pl-wax 0.45s 0.8s ease-in forwards;
+	}
+	.page-loader .pl-wax img {
+		width: 62%;
+		height: auto;
+		filter: drop-shadow(0 1px 0 rgb(0 0 0 / 0.3));
+	}
+	@keyframes pl-wax {
+		to { opacity: 0; scale: 1.25; filter: blur(2px); }
+	}
+
+	/* ── Curtain (other pages) ── */
+	.page-loader--curtain {
+		display: grid;
+		place-items: center;
+		align-content: center;
+		gap: 1rem;
+	}
+	.page-loader .pl-title {
+		padding-inline: 1.5rem;
+		font-family: var(--font-heading);
+		font-size: clamp(2.6rem, 8vw, 5.5rem);
+		text-align: center;
+		opacity: 0;
+		text-shadow: 0 0.2em 1.5em rgb(0 0 0 / 0.35);
+		animation: pl-fade-in 0.4s 0.1s forwards;
+	}
+	.page-loader .pl-rule {
+		width: min(9rem, 30vw);
+		height: 1px;
+		background: var(--pl-champagne);
+		scale: 0 1;
+		animation: pl-grow 0.6s 0.2s ease-out forwards;
+	}
+</style>

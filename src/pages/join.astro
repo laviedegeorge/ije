@@ -2,49 +2,31 @@
 export const prerender = false;
 
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import WeddingTrainContent from "@/components/wedding-train/WeddingTrainContent.astro";
+import InterestPage from "@/components/interest/InterestPage.astro";
+import { coupleNames } from "@/config/event";
+import { joinPageContent } from "@/data/interestPages";
 import { siteTitleSuffix } from "@/data/site-nav";
-import type { WeddingTrainRole } from "@/util/weddingTrainForm";
+import { resolveInvitee } from "@/util/inviteList";
 
-const parseNames = (raw: string): string[] =>
-	raw
-		.split(",")
-		.map((n) => n.trim())
-		.filter(Boolean);
-
-const both = parseNames(import.meta.env.BOTH_NAMES ?? "");
-const trainNames = [...both, ...parseNames(import.meta.env.TRAIN_NAMES ?? "")];
-const groomsmenNames = [...both, ...parseNames(import.meta.env.GROOMSMEN_NAMES ?? "")];
-
-const w = Astro.url.searchParams.get("n")?.trim() ?? "";
-
-// Normalize: collapse hyphens to spaces so "james-doe" matches "James Doe"
-const normalize = (s: string) =>
-	s.replace(/-/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
-const wNorm = normalize(w);
-
-const inTrain = wNorm.length > 0 && trainNames.some((n) => normalize(n) === wNorm);
-const inGroomsmen = wNorm.length > 0 && groomsmenNames.some((n) => normalize(n) === wNorm);
-
-const role: WeddingTrainRole =
-	inGroomsmen && inTrain ? "both" : inGroomsmen ? "groomsman" : inTrain ? "train" : "unknown";
-
-const toTitleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
-
-const allNames = [...trainNames, ...groomsmenNames];
-const matchedName = allNames.find((n) => normalize(n) === wNorm);
-const displayName = toTitleCase((matchedName ?? w).replace(/-/g, " ").trim());
+// Personal links look like ?n=ada&c=K7Q2M9 — the code grants access, the name personalises.
+const linkName = Astro.url.searchParams.get("n")?.trim() ?? "";
+const linkCode = Astro.url.searchParams.get("c")?.trim() ?? "";
+const invitee = await resolveInvitee("join", linkCode, linkName);
 
 const title = `Join the Wedding Train · ${siteTitleSuffix}`;
-const description =
-	"Joining details for the wedding train — Jane & Jeremiah's wedding, January 2027.";
+const description = `Join the wedding train for ${coupleNames}'s wedding.`;
 ---
 
-<BaseLayout title={title} description={description}>
-	<WeddingTrainContent name={displayName} role={role} />
-	<script>
-		import { mountWeddingTrainPage } from "@/components/wedding-train/WeddingTrainForm.script";
-
-		mountWeddingTrainPage();
-	</script>
+<BaseLayout
+	title={title}
+	description={description}
+	loader={invitee ? { kind: "seal", guestName: invitee.name } : undefined}
+>
+	<meta slot="head" name="robots" content="noindex" />
+	<InterestPage
+		content={joinPageContent}
+		endpoint="/api/join"
+		invitee={invitee}
+		idPrefix="join"
+	/>
 </BaseLayout>

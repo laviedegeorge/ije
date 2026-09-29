@@ -1,82 +1,99 @@
-import { google } from "googleapis";
+/**
+ * Google Sheets access through the workbook's Apps Script web app
+ * (apps-script/Code.gs). The site never talks to Google directly.
+ */
 
 export type SheetAppendResult =
 	| { ok: true }
 	| { ok: false; reason: "upstream" | "not_configured" };
 
+export type SheetReadResult =
+	| { ok: true; values: string[][] }
+	| { ok: false; reason: "upstream" | "not_configured" };
+
+const TIMEOUT_MS = 15_000;
+
+// Astro compiles `import.meta.env.X` in at build time from .env files; `process.env`
+// covers values that only exist at runtime (Vercel settings, shell variables).
+const appsScriptUrl = (): string =>
+	(import.meta.env.APPS_SCRIPT_URL || process.env.APPS_SCRIPT_URL || "").trim();
+const appsScriptSecret = (): string =>
+	(import.meta.env.APPS_SCRIPT_SECRET || process.env.APPS_SCRIPT_SECRET || "").trim();
+
+export const isSheetsConfigured = (): boolean => Boolean(appsScriptUrl() && appsScriptSecret());
+
+type ScriptReply = { ok?: boolean; error?: string; values?: unknown };
+
+const callAppsScript = async (
+	action: "append" | "read" | "setStatus",
+	payload: Record<string, unknown>,
+): Promise<{ ok: true; body: ScriptReply } | { ok: false; reason: "upstream" | "not_configured" }> => {
+	const url = appsScriptUrl();
+	const secret = appsScriptSecret();
+	if (!url || !secret) return { ok: false, reason: "not_configured" };
+
+	try {
+		// text/plain keeps it a "simple" request; Apps Script reads e.postData.contents either way.
+		const response = await fetch(url, {
+			method: "POST",
+			headers: { "Content-Type": "text/plain;charset=utf-8" },
+			body: JSON.stringify({ secret, action, ...payload }),
+			signal: AbortSignal.timeout(TIMEOUT_MS),
+		});
+		const text = await response.text();
+		let body: ScriptReply;
+		try {
+			body = JSON.parse(text) as ScriptReply;
+		} catch {
+			// Apps Script answers errors (bad deployment, quota) with an HTML page.
+			console.error(`[appsScript] ${action}: non-JSON reply (HTTP ${response.status})`);
+			return { ok: false, reason: "upstream" };
+		}
+		if (!response.ok || body.ok !== true) {
+			console.error(`[appsScript] ${action} failed:`, body.error ?? `HTTP ${response.status}`);
+			return { ok: false, reason: "upstream" };
+		}
+		return { ok: true, body };
+	} catch (err) {
+		console.error(`[appsScript] ${action} request failed:`, err);
+		return { ok: false, reason: "upstream" };
+	}
+};
+
+/** Adds rows to a tab (created if missing); headers are written when the tab is empty. */
 export const appendRowsToSheet = async (
 	sheetName: string,
 	rows: string[][],
 	opts?: { headers?: string[] },
 ): Promise<SheetAppendResult> => {
-	const spreadsheetId = import.meta.env.GOOGLE_SPREADSHEET_ID?.trim();
-	const email = import.meta.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim();
-	const key = import.meta.env.GOOGLE_PRIVATE_KEY?.trim().replace(/\\n/g, "\n");
+	const result = await callAppsScript("append", { sheet: sheetName, rows, headers: opts?.headers });
+	return result.ok ? { ok: true } : result;
+};
 
-	if (!spreadsheetId || !email || !key) {
-		return { ok: false, reason: "not_configured" };
-	}
+export type ResponseStatus = "Pending" | "Confirmed" | "Declined";
 
-	try {
-		const auth = new google.auth.JWT({
-			email,
-			key,
-			scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-		});
-		const sheets = google.sheets({ version: "v4", auth });
+/**
+ * Sets a response's Status on the Asoebi / Groomsmen tab. The row is found by its
+ * Submitted At + Code. Confirming also updates the person's row on Guests.
+ */
+export const setResponseStatus = async (
+	sheetName: string,
+	submittedAt: string,
+	code: string,
+	status: ResponseStatus,
+): Promise<SheetAppendResult> => {
+	const result = await callAppsScript("setStatus", { sheet: sheetName, submittedAt, code, status });
+	return result.ok ? { ok: true } : result;
+};
 
-		// Resolve sheet name → numeric sheetId so we never need A1 notation with apostrophes.
-		// includeGridData lets us check whether the sheet already has content.
-		const meta = await sheets.spreadsheets.get({
-			spreadsheetId,
-			includeGridData: true,
-			fields: "sheets.properties,sheets.data.rowData",
-		});
-		const existingSheet = meta.data.sheets?.find((s) => s.properties?.title === sheetName);
-		const existingSheetId = existingSheet?.properties?.sheetId;
-		const sheetIsEmpty = (existingSheet?.data?.[0]?.rowData?.length ?? 0) === 0;
-
-		let sheetId = existingSheetId;
-
-		if (sheetId === undefined || sheetId === null) {
-			const created = await sheets.spreadsheets.batchUpdate({
-				spreadsheetId,
-				requestBody: { requests: [{ addSheet: { properties: { title: sheetName } } }] },
-			});
-			sheetId = created.data.replies?.[0]?.addSheet?.properties?.sheetId ?? null;
-			if (sheetId === null || sheetId === undefined) {
-				console.error(`[googleSheetsApi] failed to create sheet "${sheetName}"`);
-				return { ok: false, reason: "upstream" };
-			}
-		}
-
-		// Write headers when the sheet has no rows yet (new or manually cleared).
-		const allRows = sheetIsEmpty && opts?.headers ? [opts.headers, ...rows] : rows;
-
-		if (allRows.length === 0) return { ok: true };
-
-		await sheets.spreadsheets.batchUpdate({
-			spreadsheetId,
-			requestBody: {
-				requests: [
-					{
-						appendCells: {
-							sheetId,
-							rows: allRows.map((row) => ({
-								values: row.map((cell) => ({
-									userEnteredValue: { stringValue: cell },
-								})),
-							})),
-							fields: "userEnteredValue",
-						},
-					},
-				],
-			},
-		});
-
-		return { ok: true };
-	} catch (err) {
-		console.error("[googleSheetsApi] append failed:", err);
-		return { ok: false, reason: "upstream" };
-	}
+/** Reads a tab as text. The script only allows tabs listed in its READABLE_TABS. */
+export const readSheetValues = async (sheetName: string): Promise<SheetReadResult> => {
+	const result = await callAppsScript("read", { sheet: sheetName });
+	if (!result.ok) return result;
+	const values = result.body.values;
+	if (!Array.isArray(values)) return { ok: false, reason: "upstream" };
+	return {
+		ok: true,
+		values: values.map((row) => (Array.isArray(row) ? row.map((cell) => String(cell ?? "")) : [])),
+	};
 };

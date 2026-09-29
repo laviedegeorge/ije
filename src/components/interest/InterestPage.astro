@@ -1,0 +1,488 @@
+---
+/**
+ * Personal-link page with Traditional / White Wedding tabs and an
+ * "I'm interested" form. Used by /join (wedding train) and /asoebi.
+ */
+import ContentCard from "@/components/ContentCard.astro";
+import HeroPageSurface from "@/components/HeroPageSurface.astro";
+import FormChoice from "@/components/forms/FormChoice.astro";
+import FormChoiceGroup from "@/components/forms/FormChoiceGroup.astro";
+import FormField from "@/components/forms/FormField.astro";
+import { event } from "@/config/event";
+import type { InterestPageContent } from "@/data/interestPages";
+import type { Invitee } from "@/util/inviteList";
+import {
+	INTEREST_EVENT_LABELS,
+	INTEREST_FIELD,
+	INTEREST_HONEYPOT_FIELD,
+} from "@/util/interestForm";
+
+interface Props {
+	content: InterestPageContent;
+	/** API route the form posts to, e.g. "/api/asoebi". */
+	endpoint: string;
+	/** The guest from the Guests tab, or null when the link isn't recognised. */
+	invitee: Invitee | null;
+	/** Prefix for element ids, so ids stay unique and readable. */
+	idPrefix: string;
+}
+
+const { content, endpoint, invitee, idPrefix } = Astro.props;
+const firstName = invitee?.name.split(" ")[0] ?? "";
+const id = (suffix: string) => `${idPrefix}-${suffix}`;
+---
+
+<HeroPageSurface bgSrc="/assets/rsvp.webp" surfaceClass="interest-page" ariaLabelledBy={id("heading")}>
+	{
+		!invitee ? (
+			<ContentCard variant="secondary" class="interest__invalid">
+				<h1 id={id("heading")} class="interest__invalid-title">Link not recognised</h1>
+				<p class="interest__invalid-copy">{content.invalidMessage}</p>
+			</ContentCard>
+		) : (
+			<div class="interest" data-interest-page data-endpoint={endpoint}>
+				<header class="interest__intro" data-reveal>
+					<p class="interest__eyebrow">{content.eyebrow}</p>
+					<h1 id={id("heading")} class="interest__title">{content.title}</h1>
+					<p class="interest__greeting">Hi {firstName},</p>
+					<p class="interest__lede">{content.intro}</p>
+					<p class="interest__deadline">
+						Deadline for registration and commitment:
+						<time datetime={event.interestDeadline.iso}>{event.interestDeadline.label}</time>
+					</p>
+				</header>
+
+				<ContentCard variant="secondary" class="interest__card" data-reveal data-delay="1">
+					<div class="interest__tabs" role="tablist" aria-label="Celebrations">
+						{content.tabs.map((tab, i) => (
+							<button
+								type="button"
+								role="tab"
+								class="interest__tab"
+								id={id(`tab-${tab.id}`)}
+								aria-controls={id(`panel-${tab.id}`)}
+								aria-selected={i === 0 ? "true" : "false"}
+								tabindex={i === 0 ? 0 : -1}
+								data-tab={tab.id}
+							>
+								{tab.label}
+							</button>
+						))}
+					</div>
+
+					{content.tabs.map((tab, i) => (
+						<section
+							class="interest__panel"
+							role="tabpanel"
+							id={id(`panel-${tab.id}`)}
+							aria-labelledby={id(`tab-${tab.id}`)}
+							hidden={i !== 0}
+						>
+							<div class="interest__panel-grid">
+								<figure class="interest__photo">
+									{tab.image ? (
+										<img src={tab.image} alt={tab.imageAlt} loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+									) : (
+										<div class="interest__photo-placeholder" role="img" aria-label={`${tab.imageAlt} (coming soon)`}>
+											<span>Fabric photo coming soon</span>
+										</div>
+									)}
+								</figure>
+								<div class="interest__details">
+									<p class="interest__date">{tab.date}</p>
+									<ul class="interest__guidance">
+										{tab.guidance.map((line) => <li>{line}</li>)}
+									</ul>
+									<button type="button" class="interest__cta" data-open-form={tab.id}>
+										{content.buttonLabel}
+									</button>
+								</div>
+							</div>
+						</section>
+					))}
+				</ContentCard>
+
+				<dialog class="interest__dialog" id={id("dialog")} aria-labelledby={id("form-title")}>
+					<div class="interest__dialog-body" data-form-view>
+						<div class="interest__dialog-head">
+							<h2 id={id("form-title")} class="interest__dialog-title">{content.formTitle}</h2>
+							<button type="button" class="interest__close" data-close-form aria-label="Close">
+								<span aria-hidden="true">×</span>
+							</button>
+						</div>
+
+						<form class="interest__form" novalidate method="post" data-interest-form>
+							<input type="hidden" name="c" value={invitee.code} />
+							<div class="interest__hp" aria-hidden="true">
+								<label for={id("company")}>Company (leave this field empty)</label>
+								<input id={id("company")} type="text" name={INTEREST_HONEYPOT_FIELD} tabindex="-1" autocomplete="off" />
+							</div>
+
+							<FormField
+								name={INTEREST_FIELD.fullName}
+								id={id("full-name")}
+								errorId={id("full-name-error")}
+								label="Full name"
+								variant="text"
+								autocomplete="name"
+								value={invitee.name}
+								required
+							/>
+							<FormField
+								name={INTEREST_FIELD.email}
+								id={id("email")}
+								errorId={id("email-error")}
+								label="Email address"
+								variant="email"
+								autocomplete="email"
+								inputmode="email"
+								required
+							/>
+							<FormField
+								name={INTEREST_FIELD.whatsapp}
+								id={id("whatsapp")}
+								errorId={id("whatsapp-error")}
+								label="WhatsApp number"
+								hint="Pick your country from the flag, then type your number"
+								variant="tel"
+								autocomplete="tel"
+								inputmode="tel"
+								required
+							/>
+							<FormChoiceGroup legend="Which celebration?" errorId={id("events-error")}>
+								{(["traditional", "white", "both"] as const).map((value) => (
+									<FormChoice name={INTEREST_FIELD.events} value={value} required>
+										{INTEREST_EVENT_LABELS[value]}
+									</FormChoice>
+								))}
+							</FormChoiceGroup>
+
+							<p class="interest__form-error" role="alert" hidden data-form-error></p>
+
+							<button type="submit" class="interest__submit" data-submit>
+								Submit
+							</button>
+						</form>
+					</div>
+
+					<div class="interest__dialog-body interest__success" data-success-view hidden>
+						<h2 class="interest__success-title" tabindex="-1">{content.successTitle}</h2>
+						<p class="interest__success-copy">{content.successMessage}</p>
+						<button type="button" class="interest__cta" data-close-form>Done</button>
+					</div>
+				</dialog>
+			</div>
+		)
+	}
+</HeroPageSurface>
+
+<script>
+	import { mountInterestPage } from "@/components/interest/InterestPage.script";
+
+	mountInterestPage();
+</script>
+
+<style>
+	.interest__intro {
+		margin: 0 auto clamp(1.5rem, 4vw, 2.25rem);
+		max-width: 40rem;
+		text-align: center;
+	}
+
+	.interest__eyebrow {
+		margin: 0 0 0.65rem;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: rgb(92 74 61 / 0.75);
+	}
+
+	.interest__title {
+		margin: 0 0 0.75rem;
+		font-size: clamp(2.5rem, 6vw, 3.75rem);
+		font-weight: 400;
+		line-height: 1.1;
+		letter-spacing: 0.01em;
+		color: var(--text-primary);
+	}
+
+	.interest__greeting {
+		margin: 0 0 0.35rem;
+		font-family: var(--font-heading);
+		font-size: 1.25rem;
+		color: var(--text-primary);
+	}
+
+	.interest__lede {
+		margin: 0;
+		font-size: clamp(0.95rem, 2vw, 1.05rem);
+		line-height: 1.55;
+		color: var(--text-muted);
+	}
+
+	.interest__deadline {
+		display: inline-block;
+		margin: 1rem 0 0;
+		padding: 0.45rem 1rem;
+		border-radius: 9999px;
+		background: rgb(255 252 247 / 0.7);
+		border: 1px solid rgb(201 168 124 / 0.5);
+		font-size: 0.85rem;
+		color: var(--text-muted);
+	}
+
+	.interest__deadline time {
+		font-weight: 700;
+		color: var(--text-primary);
+		white-space: nowrap;
+	}
+
+	:global(.content-card.interest__card) {
+		max-width: min(56rem, calc(100vw - 2rem));
+		margin-inline: auto;
+	}
+
+	/* Tabs */
+	.interest__tabs {
+		display: flex;
+		gap: 0.35rem;
+		width: fit-content;
+		max-width: 100%;
+		margin: 0 auto clamp(1.25rem, 3vw, 1.75rem);
+		padding: 0.3rem;
+		border-radius: 9999px;
+		background: rgb(255 255 255 / 0.45);
+		border: 1px solid rgb(255 255 255 / 0.7);
+	}
+
+	.interest__tab {
+		padding: 0.6rem 1.25rem;
+		border: none;
+		border-radius: 9999px;
+		background: transparent;
+		color: var(--text-muted);
+		font: inherit;
+		font-size: 0.9rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition:
+			background-color 180ms ease,
+			color 180ms ease;
+	}
+
+	.interest__tab[aria-selected="true"] {
+		background: #6e523c;
+		color: #fffcf7;
+	}
+
+	.interest__tab:focus-visible {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: 2px;
+	}
+
+	/* Panel */
+	.interest__panel-grid {
+		display: grid;
+		gap: clamp(1.25rem, 3vw, 2rem);
+		align-items: center;
+	}
+
+	@media (min-width: 768px) {
+		.interest__panel-grid {
+			grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+		}
+
+		.interest__photo {
+			aspect-ratio: 4 / 5;
+		}
+	}
+
+	.interest__photo {
+		margin: 0;
+		/* Wider on phones so the photo doesn't push the details off-screen */
+		aspect-ratio: 4 / 3;
+		border-radius: 1rem;
+		overflow: hidden;
+		background: rgb(255 255 255 / 0.4);
+	}
+
+	/* Real outfit/fabric images often carry labels and detail panels: show them whole.
+	   The fixed shape above is only for the "coming soon" placeholder. */
+	.interest__photo:has(img) {
+		aspect-ratio: auto;
+	}
+
+	.interest__photo img {
+		display: block;
+		width: 100%;
+		height: auto;
+		max-height: 80vh;
+		object-fit: contain;
+	}
+
+	.interest__photo-placeholder {
+		display: grid;
+		place-items: center;
+		width: 100%;
+		height: 100%;
+		border: 1px dashed rgb(110 82 60 / 0.35);
+		border-radius: inherit;
+		box-sizing: border-box;
+		font-size: 0.8rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: rgb(110 82 60 / 0.7);
+	}
+
+	.interest__date {
+		margin: 0 0 0.75rem;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: rgb(110 82 60 / 0.85);
+	}
+
+	.interest__guidance {
+		display: grid;
+		gap: 0.6rem;
+		margin: 0 0 1.5rem;
+		padding-left: 1.1rem;
+		font-size: 0.98rem;
+		line-height: 1.6;
+		color: var(--text-primary);
+	}
+
+	.interest__cta,
+	.interest__submit {
+		padding: 0.72rem 1.75rem;
+		min-height: 3.1rem;
+		border-radius: 9999px;
+		border: 1px solid rgb(110 82 60 / 0.35);
+		background: linear-gradient(180deg, #6e523c 0%, #5a4434 100%);
+		color: #fffcf7;
+		font: inherit;
+		font-weight: 700;
+		font-size: 1rem;
+		cursor: pointer;
+	}
+
+	.interest__cta:focus-visible,
+	.interest__submit:focus-visible {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: 3px;
+	}
+
+	.interest__submit[disabled] {
+		opacity: 0.6;
+		cursor: progress;
+	}
+
+	/* Dialog */
+	.interest__dialog {
+		/* Tailwind's reset zeroes margins; restore the browser's modal centring */
+		margin: auto;
+		width: min(32rem, calc(100vw - 2rem));
+		max-height: calc(100dvh - 2rem);
+		padding: 0;
+		border: 1px solid rgb(255 255 255 / 0.7);
+		border-radius: 1.25rem;
+		background: #f7f2eb;
+		color: var(--text-primary);
+		box-shadow: 0 24px 60px rgb(20 14 10 / 0.3);
+		font-family: var(--font-body);
+	}
+
+	.interest__dialog::backdrop {
+		background: rgb(30 20 12 / 0.45);
+		backdrop-filter: blur(4px);
+	}
+
+	.interest__dialog-body {
+		padding: clamp(1.25rem, 4vw, 1.75rem);
+	}
+
+	.interest__dialog-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.interest__dialog-title {
+		margin: 0;
+		font-size: 1.6rem;
+		font-weight: 400;
+	}
+
+	.interest__close {
+		width: 2.4rem;
+		height: 2.4rem;
+		flex: none;
+		border: none;
+		border-radius: 9999px;
+		background: rgb(110 82 60 / 0.1);
+		color: var(--text-primary);
+		font-size: 1.4rem;
+		line-height: 1;
+		cursor: pointer;
+	}
+
+	.interest__form {
+		display: grid;
+		gap: 1.25rem;
+	}
+
+	.interest__hp {
+		position: absolute;
+		left: -9999px;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+	}
+
+	.interest__form-error {
+		margin: 0;
+		font-size: 0.9rem;
+		color: rgb(150 45 35);
+	}
+
+	.interest__success {
+		text-align: center;
+	}
+
+	.interest__success-title {
+		margin: 0.5rem 0 0.75rem;
+		font-size: 2rem;
+		font-weight: 400;
+		outline: none;
+	}
+
+	.interest__success-copy {
+		margin: 0 0 1.5rem;
+		line-height: 1.6;
+		color: var(--text-muted);
+	}
+
+	/* Invalid link */
+	:global(.content-card.interest__invalid) {
+		max-width: 32rem;
+		margin: 0 auto;
+		text-align: center;
+	}
+
+	.interest__invalid-title {
+		margin: 0 0 0.75rem;
+		font-size: 2rem;
+		font-weight: 400;
+	}
+
+	.interest__invalid-copy {
+		margin: 0;
+		line-height: 1.6;
+		color: var(--text-muted);
+	}
+</style>
