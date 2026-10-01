@@ -5,6 +5,7 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 import InterestPage from "@/components/interest/InterestPage.astro";
 import { coupleNames } from "@/config/event";
 import { asoebiPageContent } from "@/data/interestPages";
+import { invitePreviewImage } from "@/data/shareInvite";
 import { siteTitleSuffix } from "@/data/site-nav";
 import { resolveInvitee } from "@/util/inviteList";
 
@@ -20,6 +21,7 @@ const description = `Asoebi for ${coupleNames}'s Traditional Marriage and White 
 <BaseLayout
 	title={title}
 	description={description}
+	ogImage={invitePreviewImage}
 	loader={invitee ? { kind: "seal", guestName: invitee.name.split(" ")[0] } : undefined}
 >
 	<meta slot="head" name="robots" content="noindex" />

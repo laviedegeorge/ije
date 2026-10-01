@@ -6,6 +6,8 @@
  */
 import type { InterestResponse } from "@/util/interestSheet";
 import type { Guest } from "@/util/inviteList";
+import ShareButtons from "@/components/admin/ShareButtons.astro";
+import { inviteMessage } from "@/data/shareInvite";
 import { GUEST_CATEGORIES, inviteLink, type InviteKind } from "@/util/inviteLinks";
 import type { RsvpGuest } from "@/util/rsvpSheet";
 
@@ -98,13 +100,7 @@ const formatDate = (iso: string) => {
 				<label class="dash__label" for="rsvp-link-output">Link</label>
 				<input id="rsvp-link-output" class="dash__input dash__input--link" type="text" readonly data-rsvp-link-output />
 
-				<div class="dash__dialog-actions">
-					<button type="submit" class="dash__action dash__action--confirm" data-copy-rsvp-link disabled>Copy link</button>
-					<a class="dash__action dash__action--link" href="#" target="_blank" rel="noopener noreferrer" data-share-rsvp-link aria-disabled="true">
-						Share on WhatsApp
-					</a>
-				</div>
-				<p class="dash__hint" role="status" aria-live="polite" data-rsvp-link-status></p>
+				<ShareButtons />
 			</form>
 		</div>
 	</dialog>
@@ -149,13 +145,9 @@ const formatDate = (iso: string) => {
 					<div class="dash__invite-link" data-invite-link={kind} hidden>
 						<label class="dash__label" for={`invite-link-${kind}`}>{kind === "asoebi" ? "Asoebi link" : "Groomsmen link"}</label>
 						<input id={`invite-link-${kind}`} class="dash__input dash__input--link" type="text" readonly data-link-output />
-						<div class="dash__dialog-actions">
-							<button type="button" class="dash__action dash__action--confirm" data-copy-link>Copy link</button>
-							<a class="dash__action dash__action--link" href="#" target="_blank" rel="noopener noreferrer" data-share-link>Share on WhatsApp</a>
-						</div>
+						<ShareButtons />
 					</div>
 				))}
-				<p class="dash__hint" role="status" aria-live="polite" data-invite-status></p>
 				<div class="dash__dialog-actions">
 					<button type="button" class="dash__action" data-invite-again>Invite someone else</button>
 				</div>
@@ -255,12 +247,7 @@ const formatDate = (iso: string) => {
 								return (
 									<div class="dash__invitee-link">
 										<span class="dash__status">{label}</span>
-										<button type="button" class="dash__action dash__action--confirm" data-copy-value={link} title={link}>
-											Copy link
-										</button>
-										<a class="dash__action dash__action--link" href={`https://wa.me/?text=${encodeURIComponent(link)}`} target="_blank" rel="noopener noreferrer">
-											WhatsApp
-										</a>
+										<ShareButtons message={inviteMessage(kind, g.name, link)} link={link} />
 									</div>
 								);
 							})}
@@ -671,9 +658,8 @@ const formatDate = (iso: string) => {
 	}
 
 	.dash__invitee-link {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
+		display: grid;
+		gap: 0.4rem;
 	}
 
 	/* Six totals: 2 per row on phones, 3 on tablets, all in one row on wide screens. */
