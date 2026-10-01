@@ -8,8 +8,9 @@ import { event } from "@/config/event";
 import { siteTitleSuffix } from "@/data/site-nav";
 import { getAdminCode, isAdmin } from "@/util/adminAuth";
 import { readSheetValues } from "@/util/googleSheetsApi";
-import { loadGuests, type Guest } from "@/util/inviteList";
 import { parseResponseRows, type InterestResponse } from "@/util/interestSheet";
+import { loadGuests, type Guest } from "@/util/inviteList";
+import { parseRsvpRows, type RsvpGuest } from "@/util/rsvpSheet";
 
 Astro.response.headers.set("Cache-Control", "no-store");
 
@@ -20,18 +21,24 @@ const error = Astro.url.searchParams.has("error");
 let data: {
 	asoebi: InterestResponse[] | null;
 	groomsmen: InterestResponse[] | null;
-	guests: Guest[] | null;
+	rsvps: RsvpGuest[] | null;
+	invitees: Guest[] | null;
+	origin: string;
 } | null = null;
 if (signedIn) {
-	const [asoebi, groomsmen, guests] = await Promise.all([
+	const [asoebi, groomsmen, rsvps, guests] = await Promise.all([
 		readSheetValues(event.sheets.asoebi),
 		readSheetValues(event.sheets.groomsmen),
+		readSheetValues(event.sheets.rsvp),
 		loadGuests({ fresh: true }),
 	]);
 	data = {
 		asoebi: asoebi.ok ? parseResponseRows(asoebi.values) : null,
 		groomsmen: groomsmen.ok ? parseResponseRows(groomsmen.values) : null,
-		guests,
+		rsvps: rsvps.ok ? parseRsvpRows(rsvps.values) : null,
+		// Everyone with a personal asoebi / groomsmen link, newest first.
+		invitees: guests && guests.filter((g) => g.code && (g.asoebi || g.groomsmen)).reverse(),
+		origin: Astro.url.origin,
 	};
 }
 ---

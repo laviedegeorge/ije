@@ -12,11 +12,41 @@ const INVITE_PAGES: Record<string, InviteListKind> = {
 	"/join": "join",
 };
 
-export const onRequest = defineMiddleware(async (context, next) => {
+/**
+ * Sent with every page and API response. No full Content-Security-Policy yet:
+ * the pages use inline scripts, Google Fonts and Vercel Analytics.
+ */
+const SECURITY_HEADERS: Record<string, string> = {
+	"X-Content-Type-Options": "nosniff",
+	// Personal links carry a code; other sites only ever see the origin.
+	"Referrer-Policy": "strict-origin-when-cross-origin",
+	"X-Frame-Options": "DENY",
+	"Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+};
+
+const withSecurityHeaders = (response: Response): Response => {
+	for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+		try {
+			response.headers.set(name, value);
+		} catch {
+			// Some responses (e.g. Response.redirect) have read-only headers.
+			return response;
+		}
+	}
+	return response;
+};
+
+export const onRequest = defineMiddleware(async (context, next) =>
+	withSecurityHeaders(await handleRequest(context, next)),
+);
+
+const handleRequest: Parameters<typeof defineMiddleware>[0] = async (context, next) => {
 	const pathname = context.url.pathname.replace(/\/+$/, "") || "/";
 
 	if (isDisabledPath(pathname)) {
-		return new Response("Not found", { status: 404 });
+		return pathname.startsWith("/api/")
+			? new Response("Not found", { status: 404 })
+			: context.rewrite("/404");
 	}
 
 	const password = getGatePassword();
@@ -47,4 +77,4 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
 	const nextPath = `${context.url.pathname}${context.url.search}`;
 	return context.redirect(`/unlock?next=${encodeURIComponent(nextPath)}`, 303);
-});
+};

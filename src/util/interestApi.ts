@@ -9,6 +9,7 @@ import {
 } from "@/util/interestForm";
 import { normalizePhoneField } from "@/util/phoneNumber";
 import { forwardInterestToGoogleSheet } from "@/util/interestSheet";
+import { interestMessage, sendTelegram } from "@/util/notify";
 
 const json = (body: unknown, status = 200): Response =>
 	new Response(JSON.stringify(body), {
@@ -71,5 +72,6 @@ export const createInterestHandler =
 			);
 		}
 
+		await sendTelegram(interestMessage(opts.list, validation.values));
 		return json({ ok: true });
 	};

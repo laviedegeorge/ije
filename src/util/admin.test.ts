@@ -4,13 +4,15 @@ import { event } from "@/config/event";
 import { ADMIN_COOKIE, isAdmin, isAdminCodeCorrect } from "@/util/adminAuth";
 import { createGateToken } from "@/util/siteGate";
 import { POST as postStatus } from "@/pages/api/admin/status";
+import { POST as postGuest } from "@/pages/api/admin/guest";
 
 vi.mock("@/util/googleSheetsApi", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@/util/googleSheetsApi")>()),
 	setResponseStatus: vi.fn().mockResolvedValue({ ok: true }),
+	addGuestToSheet: vi.fn().mockResolvedValue({ ok: true, code: "NEW123" }),
 }));
 
-import { setResponseStatus } from "@/util/googleSheetsApi";
+import { addGuestToSheet, setResponseStatus } from "@/util/googleSheetsApi";
 
 const cookiesWith = (value?: string) =>
 	({ get: (name: string) => (name === ADMIN_COOKIE && value ? { value } : undefined) }) as unknown as AstroCookies;
@@ -86,6 +88,47 @@ describe("POST /api/admin/status", () => {
 	it("reports sheet failures", async () => {
 		vi.mocked(setResponseStatus).mockResolvedValueOnce({ ok: false, reason: "upstream" });
 		const res = await callStatus(body, cookiesWith(adminToken()));
+		expect(res.status).toBe(502);
+	});
+});
+
+describe("POST /api/admin/guest", () => {
+	const invite = { name: "Ada Obi", category: "Friends of bride", plusOne: 1, asoebi: true, groomsmen: true };
+	const callGuest = (body: unknown, cookies: AstroCookies) =>
+		postGuest({
+			request: new Request("https://site.test/api/admin/guest", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			}),
+			cookies,
+		} as Parameters<typeof postGuest>[0]) as Promise<Response>;
+
+	beforeEach(() => vi.mocked(addGuestToSheet).mockClear());
+
+	it("requires the admin cookie", async () => {
+		const res = await callGuest(invite, cookiesWith());
+		expect(res.status).toBe(401);
+		expect(addGuestToSheet).not.toHaveBeenCalled();
+	});
+
+	it("adds the guest and returns their code", async () => {
+		const res = await callGuest(invite, cookiesWith(adminToken()));
+		expect(res.status).toBe(200);
+		expect(await res.json()).toEqual({ ok: true, code: "NEW123", name: "Ada Obi" });
+		expect(addGuestToSheet).toHaveBeenCalledWith(invite);
+	});
+
+	it("explains what's missing", async () => {
+		const res = await callGuest({ ...invite, asoebi: false, groomsmen: false }, cookiesWith(adminToken()));
+		expect(res.status).toBe(400);
+		expect((await res.json()).message).toBe("Tick Asoebi, Groomsmen or both.");
+		expect(addGuestToSheet).not.toHaveBeenCalled();
+	});
+
+	it("reports a sheet failure", async () => {
+		vi.mocked(addGuestToSheet).mockResolvedValueOnce({ ok: false, reason: "upstream" });
+		const res = await callGuest(invite, cookiesWith(adminToken()));
 		expect(res.status).toBe(502);
 	});
 });

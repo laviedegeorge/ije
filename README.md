@@ -20,7 +20,7 @@ On Vercel, set `ENABLE_EXPERIMENTAL_COREPACK=1` so builds use the same pinned ve
 
 ### 1. Identity and settings: `src/config/event.ts`
 
-Names, dates, location, RSVP deadline, production URL, registry link, Google Sheet tab names,
+Names, dates, location, RSVP deadline, production URL, gift account details, Google Sheet tab names,
 and which pages are switched on. Everything that repeats across the site reads from here.
 Disabled pages return 404 and drop out of the nav (restart `pnpm dev` after toggling one).
 
@@ -51,9 +51,13 @@ WhatsApp, Traditional / White / Both). Responses land on the **Asoebi** / **Groo
 #### Admin page: `/admin`
 
 Signed in with `ADMIN_CODE`. Shows the Asoebi and Groomsmen responses with **Confirm** /
-**Decline**, and a guest list summary (guests and plus ones per category). Confirming a response
+**Decline**, and the guest list from the **RSVPs** tab (totals, events, phone numbers and travel dates). Confirming a response
 (here, or by setting its Status in the sheet) updates the guest on **Guests**: Source gains
 "Asoebi" / "Groomsmen" and Plus One becomes at least 1.
+
+**Invite** adds someone to **Guests** for asoebi and/or groomsmen (name, category, plus ones) and
+shows their personal links to copy or share on WhatsApp. **RSVP link** builds a `/rsvp?n=…` link
+that greets the guest by name. Both use the address the admin page is open on.
 
 #### Page loaders
 
@@ -128,8 +132,21 @@ See `.env.example`.
 | `APPS_SCRIPT_URL` | The Apps Script web app URL (ends in `/exec`) |
 | `APPS_SCRIPT_SECRET` | Must match the script's `SITE_SECRET` property |
 | `ADMIN_CODE` | Code for `/admin`. Empty = admin page off. Long, and different from the site password. |
+| `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather, for alerts. Empty = alerts off. |
+| `TELEGRAM_CHAT_ID` | The chat the alerts go to (a group ID starts with `-`). |
 
 Do not prefix secrets with `PUBLIC_`; Astro ships those to the browser.
+
+### 6. Telegram alerts (optional)
+
+Every saved RSVP, asoebi and groomsmen sign-up sends a message to a Telegram chat
+(`src/util/notify.ts`). If Telegram can't be reached, the submission still succeeds.
+
+1. In Telegram, message **@BotFather**, send `/newbot` and follow the prompts. Copy the token.
+2. Create a group, add the bot, and send any message in it (or just message the bot directly).
+3. Open `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy `"chat":{"id": …}`. A group's
+   ID is negative, e.g. `-1001234567890`.
+4. Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in Vercel (and `.env` locally), then redeploy.
 
 ## How the password gate works
 

@@ -6,6 +6,7 @@ import {
 	RSVP_FIELD,
 	validateRsvpForm,
 } from "@/util/rsvpForm";
+import { showChosenCelebrations, type Celebration } from "@/components/calendar/addToCalendar";
 import { mountPhoneInput } from "@/components/forms/phoneInput";
 import { RSVP_SUBMIT_COPY, submitRsvpFormData } from "@/util/rsvpSubmit";
 
@@ -297,6 +298,11 @@ export const mountRsvpForm = (): void => {
 			showSubmitError(form, saved.message);
 			return;
 		}
+
+		const chosen: Celebration[] = [];
+		if (result.ok && result.values.event_traditional) chosen.push("traditional");
+		if (result.ok && result.values.event_white) chosen.push("white");
+		showChosenCelebrations(success, chosen);
 
 		form.hidden = true;
 		success.hidden = false;

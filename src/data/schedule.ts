@@ -1,4 +1,5 @@
 import { coupleNames } from "@/config/event";
+import { googleCalendarHref, icsHref, type CalendarEvent } from "@/util/calendar";
 
 export type ScheduleEventIcon = "marriage" | "church" | "reception" | "party";
 
@@ -31,64 +32,6 @@ export type SchedulePageData = {
   eyebrow: string;
   title: string;
   days: ScheduleDay[];
-};
-
-const googleCalendarBase =
-  "https://calendar.google.com/calendar/render?action=TEMPLATE";
-
-const makeGoogleCalendarHref = (
-  title: string,
-  startUtc: string,
-  endUtc: string,
-  location?: string | undefined,
-  details?: string,
-): string => {
-  const query = new URLSearchParams({
-    text: title,
-    dates: `${startUtc}/${endUtc}`,
-    ...(location ? { location } : {}),
-    ...(details ? { details } : {}),
-  });
-  return `${googleCalendarBase}&${query.toString()}`;
-};
-
-const escapeIcsText = (value: string): string =>
-  value
-    .replace(/\\/g, "\\\\")
-    .replace(/\n/g, "\\n")
-    .replace(/,/g, "\\,")
-    .replace(/;/g, "\\;");
-
-const makeAppleCalendarHref = (
-  title: string,
-  startUtc: string,
-  endUtc: string,
-  location?: string | undefined,
-  details?: string,
-): string => {
-  const uidBase = `${title}-${startUtc}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-");
-  const uid = `${uidBase}@${coupleNames.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-wedding`;
-  const lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    `PRODID:-//${coupleNames} Wedding//Schedule//EN`,
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-    "BEGIN:VEVENT",
-    `UID:${uid}`,
-    `DTSTAMP:${startUtc}`,
-    `DTSTART:${startUtc}`,
-    `DTEND:${endUtc}`,
-    `SUMMARY:${escapeIcsText(title)}`,
-    ...(location ? [`LOCATION:${escapeIcsText(location)}`] : []),
-    ...(details ? [`DESCRIPTION:${escapeIcsText(details)}`] : []),
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ];
-  const ics = `${lines.join("\r\n")}\r\n`;
-  return `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`;
 };
 
 /** Google Maps search link for an address (use a maps.app.goo.gl pin instead when you have one). */
@@ -129,6 +72,24 @@ const traditionalVenue =
   "Late Mr. Kenneth Chukwuma Ibekwe's Compound, Umunebo Obokwu, Obinze, Owerri West LGA, Imo State, Nigeria";
 const churchVenue = "St. James Anglican Church, Uzii, Owerri, Imo State, Nigeria";
 
+/** The two celebrations as calendar entries, also offered after an RSVP or sign-up. */
+export const celebrationEvents = {
+  traditional: {
+    title: `${coupleNames}'s Traditional Marriage (Ịgba Nkwụ)`,
+    start: "20261223T120000Z",
+    end: "20261223T170000Z",
+    location: traditionalVenue,
+    details: colorsLabel(traditionalColors),
+  },
+  white: {
+    title: `${coupleNames}'s Church Wedding & Reception`,
+    start: "20261226T090000Z",
+    end: "20261226T150000Z",
+    location: churchVenue,
+    details: `Reception follows immediately after the church service. ${colorsLabel(churchColors)}`,
+  },
+} satisfies Record<"traditional" | "white", CalendarEvent>;
+
 export const schedulePageData: SchedulePageData = {
   eyebrow: "Schedule",
   title: "Wedding Celebrations",
@@ -146,20 +107,8 @@ export const schedulePageData: SchedulePageData = {
           colorsOfTheDay: traditionalColors,
           notes: "For directions, call Mr. Bright (08038723638) or Christopher (07060969839).",
           mapHref: makeMapSearchHref("Umunebo Obokwu, Obinze, Owerri West, Imo State, Nigeria"),
-          googleCalendarHref: makeGoogleCalendarHref(
-            `${coupleNames}'s Traditional Marriage (Ịgba Nkwụ)`,
-            "20261223T120000Z",
-            "20261223T170000Z",
-            traditionalVenue,
-            colorsLabel(traditionalColors),
-          ),
-          appleCalendarHref: makeAppleCalendarHref(
-            `${coupleNames}'s Traditional Marriage (Ịgba Nkwụ)`,
-            "20261223T120000Z",
-            "20261223T170000Z",
-            traditionalVenue,
-            colorsLabel(traditionalColors),
-          ),
+          googleCalendarHref: googleCalendarHref(celebrationEvents.traditional),
+          appleCalendarHref: icsHref([celebrationEvents.traditional]),
         },
       ],
     },
@@ -176,20 +125,8 @@ export const schedulePageData: SchedulePageData = {
           colorsOfTheDay: churchColors,
           notes: "The reception follows immediately after the church service.",
           mapHref: "https://maps.app.goo.gl/7tFyDPf72jgfJ5hM8",
-          googleCalendarHref: makeGoogleCalendarHref(
-            `${coupleNames}'s Church Wedding & Reception`,
-            "20261226T090000Z",
-            "20261226T150000Z",
-            churchVenue,
-            `Reception follows immediately after the church service. ${colorsLabel(churchColors)}`,
-          ),
-          appleCalendarHref: makeAppleCalendarHref(
-            `${coupleNames}'s Church Wedding & Reception`,
-            "20261226T090000Z",
-            "20261226T150000Z",
-            churchVenue,
-            `Reception follows immediately after the church service. ${colorsLabel(churchColors)}`,
-          ),
+          googleCalendarHref: googleCalendarHref(celebrationEvents.white),
+          appleCalendarHref: icsHref([celebrationEvents.white]),
         },
       ],
     },

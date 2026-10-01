@@ -21,7 +21,7 @@ const DURATION_MS = { welcome: 5350, seal: 4150, curtain: 1950 } as const;
 
 // Once-per-visit loaders remember they've played for this page; the curtain always plays.
 const seenKey = loader.kind === "curtain" ? "" : `loader-seen:${loader.kind}:${Astro.url.pathname}`;
-const guestFirstName = loader.kind === "seal" ? (loader.guestName ?? "").trim().split(/\s+/)[0] : "";
+const guestName = loader.kind === "seal" ? (loader.guestName ?? "").trim() : "";
 const photo = loader.kind === "seal" ? "" : loader.photo;
 // "Owerri · December 2026"
 const monthYear = new Date(event.countdownTarget).toLocaleString("en-GB", { month: "long", year: "numeric" });
@@ -79,7 +79,7 @@ const place = event.locationLabel.split(",")[0];
 				<div class="pl-env-back" />
 				<div class="pl-env-card">
 					<div>
-						{guestFirstName ? <div class="pl-for">For {guestFirstName}</div> : null}
+						{guestName ? <div class="pl-for">For {guestName}</div> : null}
 						<div class="pl-names">{coupleNames}</div>
 						<div class="pl-date">{event.dateLabel}</div>
 						<div class="pl-line" />

@@ -1,0 +1,19 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import ComingSoonNotice from "@/components/ComingSoonNotice.astro";
+import { siteTitleSuffix } from "@/data/site-nav";
+
+// Also rendered for pages switched off in src/config/event.ts (see src/middleware.ts).
+Astro.response.status = 404;
+---
+
+<BaseLayout title={`Page not found · ${siteTitleSuffix}`}>
+	<meta slot="head" name="robots" content="noindex" />
+	<ComingSoonNotice
+		eyebrow="404"
+		title="Page not found"
+		tag={null}
+		message="This link may be old or mistyped. If you were sent a personal link, please open it again from the original message."
+		link={{ href: "/", label: "Go to the home page" }}
+	/>
+</BaseLayout>

@@ -13,9 +13,8 @@ import {
 
 const title = `${siteTitleSuffix}`;
 const description = `Wedding details for ${coupleFullNames}, including celebration dates, venue highlights, and RSVP access.`;
-// Alternates casual (brown/white: 1, 3, 6, 7, 8) and corporate (black: 2, 4, 5)
-// photos. There are fewer corporate shots, so 2 and 4 appear twice.
-const couplePhotoNumbers = [1, 2, 3, 4, 6, 5, 7, 2, 8, 4];
+// Alternates casual (brown/white: 6, 7, 8) and corporate (black: 4, 5) photos.
+const couplePhotoNumbers = [6, 4, 7, 5, 8];
 // The marquee needs at least ~6 photos to fill wide screens; repeat the set if there are fewer.
 const marqueePhotoNumbers = Array.from(
   { length: Math.max(6, couplePhotoNumbers.length) },
@@ -583,6 +582,16 @@ const quickLinks = navItems
 
     .home-marquee__viewport {
       overflow-x: auto;
+    }
+  }
+
+  /* These cards sit on the plain page background, where the glass blur has
+     nothing to blur but still costs a GPU pass every scroll frame on phones. */
+  @media (max-width: 767px) {
+    .home-event-card,
+    .home-explore__card {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
     }
   }
 </style>

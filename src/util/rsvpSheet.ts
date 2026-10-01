@@ -1,6 +1,7 @@
 import type { CountryResidence, RsvpRecord } from "@/util/rsvpForm";
 import { event } from "@/config/event";
 import { appendRowsToSheet } from "@/util/googleSheetsApi";
+import { headerColumns } from "@/util/inviteList";
 import { sanitizeSheetCell } from "@/util/sheetCell";
 
 export { sanitizeSheetCell };
@@ -84,8 +85,8 @@ const primaryGuestFields = (
 	const { country, other_country } = countryLabelForRecord(record);
 	return {
 		submitted_at: submittedAt,
-		email: record.email,
-		phone: record.phone ?? "",
+		email: record.email ?? "",
+		phone: record.phone,
 		country,
 		other_country,
 		event_traditional: boolLabel(record.event_traditional),
@@ -128,6 +129,14 @@ export const recordToSheetRows = (
 	return rows.map(sanitizeRow);
 };
 
+/** Columns of the RSVPs tab, in the order rowToValues writes them. */
+export const RSVP_HEADERS = [
+	"Submitted At", "Full Name", "Guest Role", "Primary Guest",
+	"Email", "Phone", "Country", "Other Country",
+	"Traditional Event", "White Wedding", "Expected Arrival", "Expected Departure",
+	"Guest Notes", "Relationship", "Message for Couple",
+] as const;
+
 const rowToValues = (row: RsvpSheetGuestRow): string[] => [
 	row.submitted_at,
 	row.full_name,
@@ -154,13 +163,56 @@ export const forwardRsvpToGoogleSheet = async (
 ): Promise<ForwardRsvpResult> => {
 	const rows = recordToSheetRows(record, opts).map(rowToValues);
 	const result = await appendRowsToSheet(SHEET_NAME, rows, {
-		headers: [
-			"Submitted At", "Full Name", "Guest Role", "Primary Guest",
-			"Email", "Phone", "Country", "Other Country",
-			"Traditional Event", "White Wedding", "Expected Arrival", "Expected Departure",
-			"Guest Notes", "Relationship", "Message for Couple",
-		],
+		headers: [...RSVP_HEADERS],
 	});
 	if (!result.ok) return { ok: false, reason: "upstream" };
 	return { ok: true };
+};
+
+/** One attending guest from the RSVPs tab, as the admin page shows them. */
+export type RsvpGuest = {
+	submittedAt: string;
+	name: string;
+	/** Empty for the person who RSVPed; their name for a plus one. */
+	plusOneOf: string;
+	phone: string;
+	email: string;
+	country: string;
+	traditional: boolean;
+	white: boolean;
+	arrival: string;
+	departure: string;
+	relationship: string;
+	notes: string;
+	message: string;
+};
+
+/** Rows from the RSVPs tab → guests, newest first. Columns are found by header. */
+export const parseRsvpRows = (values: string[][]): RsvpGuest[] => {
+	const [header, ...rows] = values;
+	if (!header) return [];
+	const col = headerColumns(header);
+	const cell = (row: string[], label: string) => {
+		const i = col(label);
+		return i === -1 ? "" : (row[i] ?? "").trim();
+	};
+
+	return rows
+		.map((row) => ({
+			submittedAt: cell(row, "Submitted At"),
+			name: cell(row, "Full Name"),
+			plusOneOf: cell(row, "Guest Role") === "Plus one" ? cell(row, "Primary Guest") : "",
+			phone: cell(row, "Phone"),
+			email: cell(row, "Email"),
+			country: cell(row, "Country"),
+			traditional: cell(row, "Traditional Event") === "Yes",
+			white: cell(row, "White Wedding") === "Yes",
+			arrival: cell(row, "Expected Arrival"),
+			departure: cell(row, "Expected Departure"),
+			relationship: cell(row, "Relationship"),
+			notes: cell(row, "Guest Notes"),
+			message: cell(row, "Message for Couple"),
+		}))
+		.filter((g) => g.name)
+		.reverse();
 };

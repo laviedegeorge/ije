@@ -1,14 +1,8 @@
-import { coupleNames, event, isPageEnabled, type PageKey } from "@/config/event";
+import { coupleNames, isPageEnabled, type PageKey } from "@/config/event";
 
 /** Shared nav + routes for Header and static pages */
 export const siteTitleSuffix = coupleNames;
 export const defaultPageDescription = `${siteTitleSuffix} · Wedding details coming soon.`;
-
-const registryComingSoon = event.comingSoon.includes("registry");
-
-/** While the registry is coming soon, links point at the site's /registry notice. */
-export const registryHref = registryComingSoon ? "/registry" : event.registryHref;
-export const registryIsExternal = !registryComingSoon;
 
 export type HomeEventPreview = {
 	title: string;
@@ -48,7 +42,7 @@ export type NavTopLink = {
 	target: "_self" | "_blank";
 };
 
-type NavEntry = NavTopLink & { page?: PageKey };
+type NavEntry = NavTopLink & { page: PageKey };
 
 const allNavItems: NavEntry[] = [
 	{
@@ -68,8 +62,9 @@ const allNavItems: NavEntry[] = [
 	{
 		kind: "link",
 		label: "Registry",
-		href: registryHref,
-		target: registryIsExternal ? "_blank" : "_self",
+		href: "/registry",
+		target: "_self",
+		page: "registry",
 	},
 	{
 		kind: "link",
@@ -88,16 +83,9 @@ const allNavItems: NavEntry[] = [
 	// Asoebi and Join are reached through personal links (?n=name), not the nav.
 ];
 
-/**
- * Nav links, minus pages switched off in `src/config/event.ts`. The registry
- * shows while it's coming soon, or once live when showRegistryInNav is on.
- */
+/** Nav links, minus pages switched off in `src/config/event.ts`. */
 export const navItems: NavTopLink[] = allNavItems
-	.filter(({ page, href }) =>
-		page
-			? isPageEnabled(page)
-			: registryComingSoon || (href !== "" && event.showRegistryInNav),
-	)
+	.filter(({ page }) => isPageEnabled(page))
 	.map(({ page: _page, ...link }) => link);
 
 export function navHref(path: string, slug: string): string {

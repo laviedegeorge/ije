@@ -7,15 +7,19 @@ import { siteTitleSuffix } from "@/data/site-nav";
 const title = `RSVP · ${siteTitleSuffix}`;
 const description = `${coupleNames} — reply by ${event.rsvpDeadline.label} for celebrations in ${event.locationLabel} (${event.dateLabel}). Share your attendance and travel details.`;
 const canonicalHref = new URL("/rsvp", Astro.url.origin).href;
+
+// Links like /rsvp?n=Mr.%20Anderson or /rsvp?n=The+Anderson+Family greet the guest
+// with the name exactly as written.
+const guestName = (Astro.url.searchParams.get("n") ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
 ---
 
 <BaseLayout
 	title={title}
 	description={description}
 	canonicalHref={canonicalHref}
-	loader={{ kind: "seal" }}
+	loader={{ kind: "seal", guestName }}
 >
-	<RsvpContent />
+	<RsvpContent guestName={guestName} />
 	<script>
 		import { mountRsvpForm } from "@/components/rsvp/RsvpForm.script";
 

@@ -5,6 +5,7 @@ import Footer from "@/components/Footer.astro";
 import Header from "@/components/Header.astro";
 import PageLoader from "@/components/loader/PageLoader.astro";
 import type { LoaderConfig } from "@/components/loader/loaderConfig";
+import { coupleNames } from "@/config/event";
 
 interface Props {
   title: string;
@@ -35,6 +36,8 @@ const loaderPhoto = loader && loader.kind !== "seal" ? loader.photo : null;
 
 const resolvedOgTitle = ogTitle ?? title;
 const resolvedOgDescription = ogDescription ?? description;
+// Absolute, as link previews (WhatsApp, iMessage) require. A JPEG for the same reason.
+const ogImage = new URL("/og.jpg", Astro.site ?? Astro.url.origin).href;
 ---
 
 <!doctype html>
@@ -44,24 +47,26 @@ const resolvedOgDescription = ogDescription ?? description;
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1"
-    />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#f6f1ea" />
+    <!-- No maximum-scale: guests must be able to pinch-zoom. Form fields use
+         16px+ text, so iOS doesn't zoom in when one is tapped. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     {description ? <meta name="description" content={description} /> : null}
     <link rel="canonical" href={canonicalHref} />
-    {
-      resolvedOgDescription ? (
-        <>
-          <meta property="og:type" content="website" />
-          <meta property="og:title" content={resolvedOgTitle} />
-          <meta property="og:description" content={resolvedOgDescription} />
-          <meta property="og:url" content={ogUrl} />
-        </>
-      ) : null
-    }
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={coupleNames} />
+    <meta property="og:title" content={resolvedOgTitle} />
+    {resolvedOgDescription ? <meta property="og:description" content={resolvedOgDescription} /> : null}
+    <meta property="og:url" content={ogUrl} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={coupleNames} />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

@@ -262,10 +262,13 @@ describe("interest API", () => {
 		expect(appendRowsToSheet).not.toHaveBeenCalled();
 	});
 
-	it("returns field errors for invalid input", async () => {
-		const res = await call(postJoin, form({ [INTEREST_FIELD.email]: "" }));
+	it("requires a WhatsApp number but not an email", async () => {
+		const res = await call(postJoin, form({ [INTEREST_FIELD.whatsapp]: "" }));
 		expect(res.status).toBe(400);
-		expect((await res.json()).fieldErrors).toHaveProperty(INTEREST_FIELD.email);
+		expect((await res.json()).fieldErrors).toHaveProperty(INTEREST_FIELD.whatsapp);
+
+		const noEmail = await call(postJoin, form({ c: "NGO333", [INTEREST_FIELD.email]: "" }));
+		expect(noEmail.status).toBe(200);
 	});
 
 	it("drops honeypot submissions without saving", async () => {
