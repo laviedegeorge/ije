@@ -12,6 +12,8 @@ interface Props {
   description?: string;
   canonicalHref?: string;
   ogTitle?: string;
+  /** Link-preview image (1200×630 JPEG in public/); the couple photo when omitted. */
+  ogImage?: { src: string; alt: string };
   ogDescription?: string;
   ogUrl?: string;
   htmlClass?: string;
@@ -27,6 +29,7 @@ const {
   ogTitle,
   ogDescription,
   ogUrl = canonicalHref,
+  ogImage: ogImageProp = { src: "/og.jpg", alt: coupleNames },
   htmlClass,
   bodyClass,
   loader,
@@ -36,8 +39,9 @@ const loaderPhoto = loader && loader.kind !== "seal" ? loader.photo : null;
 
 const resolvedOgTitle = ogTitle ?? title;
 const resolvedOgDescription = ogDescription ?? description;
-// Absolute, as link previews (WhatsApp, iMessage) require. A JPEG for the same reason.
-const ogImage = new URL("/og.jpg", Astro.site ?? Astro.url.origin).href;
+// Absolute, as link previews (WhatsApp, iMessage) require; a JPEG for the same reason.
+// From the address being served, so preview deployments show their own image.
+const ogImage = new URL(ogImageProp.src, Astro.url.origin).href;
 ---
 
 <!doctype html>
@@ -65,7 +69,7 @@ const ogImage = new URL("/og.jpg", Astro.site ?? Astro.url.origin).href;
     <meta property="og:image" content={ogImage} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content={coupleNames} />
+    <meta property="og:image:alt" content={ogImageProp.alt} />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

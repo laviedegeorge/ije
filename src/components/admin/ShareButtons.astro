@@ -1,0 +1,80 @@
+---
+/**
+ * Copy message · Copy link · WhatsApp · Share card, for one personal link.
+ * Pass message/link to render them filled in; the dialogs leave them empty and
+ * fill them with fillShareButtons() once the link exists. Clicks are handled by
+ * mountShareButtons() (AdminDashboard.script.ts).
+ */
+import { whatsAppHref } from "@/data/shareInvite";
+
+interface Props {
+	message?: string;
+	link?: string;
+}
+
+const { message = "", link = "" } = Astro.props;
+const empty = !message;
+---
+
+<div class="share" data-share-buttons>
+	<button type="button" class="share__btn share__btn--primary" data-copy-value={message} disabled={empty}>
+		Copy message
+	</button>
+	<button type="button" class="share__btn" data-copy-value={link} disabled={empty}>Copy link</button>
+	<a
+		class="share__btn"
+		href={empty ? "#" : whatsAppHref(message)}
+		target="_blank"
+		rel="noopener noreferrer"
+		data-whatsapp
+		aria-disabled={empty ? "true" : undefined}
+	>
+		WhatsApp
+	</a>
+	<!-- Shown only where the browser can share a picture (mostly phones). -->
+	<button type="button" class="share__btn" data-share-card data-share-text={message} hidden disabled={empty}>
+		Share card
+	</button>
+</div>
+
+<style>
+	.share {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.share__btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 2.5rem;
+		box-sizing: border-box;
+		padding: 0.45rem 0.9rem;
+		border-radius: 9999px;
+		border: 1px solid rgb(110 82 60 / 0.35);
+		background: transparent;
+		color: var(--text-primary);
+		font: inherit;
+		font-size: 0.85rem;
+		font-weight: 700;
+		white-space: nowrap;
+		text-decoration: none;
+		cursor: pointer;
+	}
+
+	.share__btn--primary {
+		background: #6e523c;
+		color: #fffcf7;
+	}
+
+	.share__btn[hidden] {
+		display: none;
+	}
+
+	.share__btn:disabled,
+	.share__btn[aria-disabled="true"] {
+		opacity: 0.45;
+		pointer-events: none;
+	}
+</style>
