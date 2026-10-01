@@ -9,6 +9,7 @@ import {
 } from "@/util/rsvpForm";
 import { isSheetsConfigured } from "@/util/googleSheetsApi";
 import { forwardRsvpToGoogleSheet } from "@/util/rsvpSheet";
+import { rsvpMessage, sendTelegram } from "@/util/notify";
 
 export const prerender = false;
 
@@ -60,6 +61,7 @@ export const POST: APIRoute = async ({ request }) => {
 		);
 	}
 
+	await sendTelegram(rsvpMessage(record));
 	return json({ ok: true });
 };
 

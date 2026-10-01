@@ -1,5 +1,5 @@
 ---
-/** In-layout "coming soon" card for pages listed in `event.comingSoon`. */
+/** In-layout notice card: "coming soon" pages (see `event.comingSoon`) and the 404 page. */
 import ContentCard from "@/components/ContentCard.astro";
 import HeroPageSurface from "@/components/HeroPageSurface.astro";
 
@@ -7,18 +7,27 @@ interface Props {
 	eyebrow: string;
 	title: string;
 	message: string;
+	/** The pill under the title; null hides it. */
+	tag?: string | null;
+	link?: { href: string; label: string };
 }
 
-const { eyebrow, title, message } = Astro.props;
+const {
+	eyebrow,
+	title,
+	message,
+	tag = "Coming soon",
+	link = { href: "/schedule", label: "See the schedule" },
+} = Astro.props;
 ---
 
-<HeroPageSurface bgSrc="/assets/rsvp.webp" surfaceClass="coming-soon-notice" ariaLabelledBy="coming-soon-title">
+<HeroPageSurface bgSrc="/assets/couple/6.webp" surfaceClass="coming-soon-notice" ariaLabelledBy="coming-soon-title">
 	<ContentCard variant="secondary" class="coming-soon-notice__card" data-reveal>
 		<p class="coming-soon-notice__eyebrow">{eyebrow}</p>
 		<h1 id="coming-soon-title" class="coming-soon-notice__title">{title}</h1>
-		<p class="coming-soon-notice__tag">Coming soon</p>
+		{tag && <p class="coming-soon-notice__tag">{tag}</p>}
 		<p class="coming-soon-notice__message">{message}</p>
-		<a class="coming-soon-notice__link" href="/schedule">See the schedule</a>
+		<a class="coming-soon-notice__link" href={link.href}>{link.label}</a>
 	</ContentCard>
 </HeroPageSurface>
 

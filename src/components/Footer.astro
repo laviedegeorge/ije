@@ -228,6 +228,13 @@ const footerNavLinks = navItems.filter((n) => n.target === "_self")
     animation-duration: var(--brand-cycle);
     animation-timing-function: ease-in-out;
     animation-iteration-count: infinite;
+    /* The footer sits under every page; only animate while it's on screen,
+       since max-width changes need a layout pass each frame. */
+    animation-play-state: paused;
+  }
+
+  .site-footer__inner--revealed .site-footer__brand-segment {
+    animation-play-state: running;
   }
 
   .site-footer__brand-segment--full {
@@ -372,6 +379,7 @@ const footerNavLinks = navItems.filter((n) => n.target === "_self")
 
     let revealed = false;
     let resizeFrame = 0;
+    let scrollFrame = 0;
 
     const queueMeasure = () => {
       cancelAnimationFrame(resizeFrame);
@@ -389,9 +397,18 @@ const footerNavLinks = navItems.filter((n) => n.target === "_self")
       inner.classList.toggle("site-footer__inner--revealed", revealed);
     };
 
+    // At most one measurement per frame, however fast scroll events arrive.
+    const onScroll = () => {
+      if (scrollFrame) return;
+      scrollFrame = requestAnimationFrame(() => {
+        scrollFrame = 0;
+        updateReveal();
+      });
+    };
+
     const onResize = () => {
       queueMeasure();
-      updateReveal();
+      onScroll();
     };
 
     if (countdown) updateCountdown(countdown);
@@ -400,7 +417,7 @@ const footerNavLinks = navItems.filter((n) => n.target === "_self")
     queueMeasure();
     updateReveal();
 
-    window.addEventListener("scroll", updateReveal, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onResize, { passive: true });
   }
 

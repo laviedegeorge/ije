@@ -1,6 +1,5 @@
-import { event } from "@/config/event";
+import { event, isPageEnabled } from "@/config/event";
 import { schedulePageData } from "@/data/schedule";
-import { registryHref, registryIsExternal } from "@/data/site-nav";
 
 export type FaqAnswerPart =
 	| { type: "text"; value: string }
@@ -77,23 +76,20 @@ export const weddingFaq: FaqItem[] = [
       { type: "text", value: " page. It helps us plan for everyone." },
     ],
   },
-  {
-    question: "Do you have a gift registry?",
-    answer: [
-      {
-        type: "text",
-        value: registryIsExternal ? "Yes. Please visit our " : "Your presence is the greatest gift. For those who have asked, our ",
-      },
-      {
-        type: "link",
-        label: "Registry",
-        href: registryHref,
-        external: registryIsExternal,
-      },
-      {
-        type: "text",
-        value: registryIsExternal ? " on Zola for gift options." : " details are coming soon.",
-      },
-    ],
-  },
+  ...(isPageEnabled("registry")
+    ? [
+        {
+          question: "Do you have a gift registry?",
+          answer: [
+            {
+              type: "text",
+              value:
+                "Your presence is the greatest gift. For those who have asked, we're keeping things simple and accepting cash gifts and bank transfers only. You'll find our account details on the ",
+            },
+            { type: "link", label: "Registry", href: "/registry" },
+            { type: "text", value: " page." },
+          ],
+        } satisfies FaqItem,
+      ]
+    : []),
 ];

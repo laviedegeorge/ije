@@ -1,3 +1,4 @@
+import { showChosenCelebrations, type Celebration } from "@/components/calendar/addToCalendar";
 import { mountPhoneInput } from "@/components/forms/phoneInput";
 import { parseApiBody } from "@/util/apiResponse";
 import { INTEREST_FIELD, parseInterestFormData, validateInterestForm } from "@/util/interestForm";
@@ -131,6 +132,9 @@ const mountForm = (root: HTMLElement): void => {
 			const body = parseApiBody(await response.json().catch(() => null));
 
 			if (response.ok && body?.ok) {
+				const events = String(formData.get(INTEREST_FIELD.events));
+				const chosen: Celebration[] = events === "both" ? ["traditional", "white"] : [events as Celebration];
+				showChosenCelebrations(successView, chosen);
 				form.reset();
 				formView.hidden = true;
 				successView.hidden = false;

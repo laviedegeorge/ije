@@ -1,5 +1,6 @@
 ---
 import { event } from "@/config/event";
+import AddToCalendar from "@/components/calendar/AddToCalendar.astro";
 import ContentCard from "@/components/ContentCard.astro";
 import HeroPageSurface from "@/components/HeroPageSurface.astro";
 import FormCheck from "@/components/forms/FormCheck.astro";
@@ -15,6 +16,13 @@ import {
   RSVP_FIELD,
   RSVP_HONEYPOT_FIELD,
 } from "@/util/rsvpForm";
+
+interface Props {
+	/** Name from the link's ?n=, shown as a greeting. Empty for a plain /rsvp. */
+	guestName?: string;
+}
+
+const { guestName } = Astro.props;
 
 const fieldIds = {
 	country: "rsvp-field-country",
@@ -63,19 +71,19 @@ const personalFields: SimpleField[] = [
 		name: RSVP_FIELD.email,
 		label: "Email address",
 		variant: "email",
+		optional: true,
 		autocomplete: "email",
 		inputmode: "email",
-		required: true,
 	},
 	{
 		id: fieldIds.phone,
 		name: RSVP_FIELD.phone,
 		label: "Phone number",
 		variant: "tel",
-		optional: true,
 		autocomplete: "tel",
 		inputmode: "tel",
 		hint: "Pick your country from the flag, then type your number",
+		required: true,
 	},
 ];
 
@@ -111,13 +119,14 @@ const thankYouWriteChars = ["T", "h", "a", "n", "k", "\u00A0", "y", "o", "u"];
 ---
 
 <HeroPageSurface
-	bgSrc="/assets/rsvp.webp"
+	bgSrc="/assets/couple/6.webp"
 	surfaceClass="rsvp-page"
 	ariaLabelledBy="rsvp-heading"
 >
 	<header class="rsvp__intro" data-reveal>
 		<p class="rsvp__eyebrow">Confirm your attendance</p>
 		<h1 id="rsvp-heading" class="rsvp__title">RSVP</h1>
+		{guestName && <p class="rsvp__greeting">Hi {guestName},</p>}
 		<p class="rsvp__lede">
 			We’d love to know how we can make your time with us smooth — events
 			you’ll join, travel logistics, and anything that helps us host you
@@ -344,6 +353,7 @@ const thankYouWriteChars = ["T", "h", "a", "n", "k", "\u00A0", "y", "o", "u"];
 				<p class="rsvp__success-copy">
 					Your RSVP is in — thank you! We can’t wait to celebrate with you. If anything changes, just let us know.
 				</p>
+				<AddToCalendar />
 			</div>
 		</div>
 	</ContentCard>
@@ -371,6 +381,13 @@ const thankYouWriteChars = ["T", "h", "a", "n", "k", "\u00A0", "y", "o", "u"];
 		font-weight: 400;
 		line-height: 1.1;
 		letter-spacing: 0.01em;
+		color: var(--text-primary);
+	}
+
+	.rsvp__greeting {
+		margin: 0 0 0.35rem;
+		font-family: var(--font-heading);
+		font-size: 1.25rem;
 		color: var(--text-primary);
 	}
 

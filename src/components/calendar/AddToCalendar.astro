@@ -1,0 +1,151 @@
+---
+/**
+ * "Add to your calendar" block for the RSVP and sign-up thank-you views. It
+ * renders both celebrations hidden; the form script reveals the ones the guest
+ * chose with showChosenCelebrations(). The .ics files alert a week before.
+ */
+import { celebrationEvents, schedulePageData } from "@/data/schedule";
+import { googleCalendarHref, icsHref, type CalendarEvent } from "@/util/calendar";
+
+interface Props {
+	/** Optional weekly reminder up to a deadline (asoebi / wedding train). */
+	reminder?: { event: CalendarEvent; label: string } | null;
+}
+
+const { reminder } = Astro.props;
+
+const [tradDay, churchDay] = schedulePageData.days;
+const celebrations = [
+	{ id: "traditional", label: tradDay.events[0].title, date: tradDay.dayLabel, event: celebrationEvents.traditional },
+	{ id: "white", label: churchDay.events[0].title, date: churchDay.dayLabel, event: celebrationEvents.white },
+] as const;
+
+const weekBefore = (event: CalendarEvent): CalendarEvent => ({ ...event, alert: "-P7D" });
+const fileName = (label: string) => `${label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}.ics`;
+---
+
+<div class="add-cal" data-add-to-calendar>
+	<p class="add-cal__heading">Add to your calendar</p>
+	<ul class="add-cal__list">
+		{celebrations.map((c) => (
+			<li class="add-cal__row" data-celebration={c.id} hidden>
+				<p class="add-cal__label">
+					{c.label}
+					<span class="add-cal__date">{c.date}</span>
+				</p>
+				<div class="add-cal__buttons">
+					<a class="add-cal__btn" href={googleCalendarHref(c.event)} target="_blank" rel="noopener noreferrer">
+						Google
+					</a>
+					<a class="add-cal__btn" href={icsHref([weekBefore(c.event)])} download={fileName(c.label)}>
+						Apple / Outlook
+					</a>
+				</div>
+			</li>
+		))}
+		{reminder && (
+			<li class="add-cal__row">
+				<p class="add-cal__label">
+					{reminder.label}
+					<span class="add-cal__date">Every week until the deadline</span>
+				</p>
+				<div class="add-cal__buttons">
+					<a class="add-cal__btn" href={googleCalendarHref(reminder.event)} target="_blank" rel="noopener noreferrer">
+						Google
+					</a>
+					<a class="add-cal__btn" href={icsHref([reminder.event])} download="weekly-reminder.ics">
+						Apple / Outlook
+					</a>
+				</div>
+			</li>
+		)}
+	</ul>
+	<p class="add-cal__note">Apple / Outlook entries come with a reminder a week before each celebration.</p>
+</div>
+
+<style>
+	.add-cal {
+		margin: 1.25rem 0 1.5rem;
+		padding: 1rem;
+		border-radius: 1rem;
+		border: 1px solid rgb(110 82 60 / 0.18);
+		background: rgb(255 252 247 / 0.7);
+		text-align: left;
+	}
+
+	.add-cal__heading {
+		margin: 0 0 0.75rem;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: #6e523c;
+	}
+
+	.add-cal__list {
+		display: grid;
+		gap: 0.85rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.add-cal__row[hidden] {
+		display: none;
+	}
+
+	.add-cal__label {
+		margin: 0 0 0.45rem;
+		font-weight: 600;
+		line-height: 1.35;
+		color: var(--text-primary);
+	}
+
+	.add-cal__date {
+		display: block;
+		font-size: 0.82rem;
+		font-weight: 400;
+		color: var(--text-muted);
+	}
+
+	.add-cal__buttons {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.5rem;
+	}
+
+	.add-cal__btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.6rem 0.9rem;
+		border: 1px solid rgb(110 82 60 / 0.28);
+		border-radius: 9999px;
+		background: rgb(110 82 60 / 0.1);
+		color: #4e3b2c;
+		font-size: 0.78rem;
+		font-weight: 600;
+		letter-spacing: 0.03em;
+		text-transform: uppercase;
+		text-decoration: none;
+		white-space: nowrap;
+		transition: background-color 180ms ease, color 180ms ease;
+	}
+
+	.add-cal__btn:hover {
+		background: #6e523c;
+		color: #fff;
+	}
+
+	.add-cal__btn:focus-visible {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: 2px;
+	}
+
+	.add-cal__note {
+		margin: 0.85rem 0 0;
+		font-size: 0.78rem;
+		line-height: 1.45;
+		color: var(--text-muted);
+	}
+</style>

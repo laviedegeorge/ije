@@ -42,10 +42,10 @@ export const joinPageContent: InterestPageContent = {
 			date: "Wednesday, December 23, 2026",
 			image: "/assets/outfits/groomsmen-traditional.webp",
 			imageAlt:
-				"The groom's train traditional outfit: an olive-green tailored set with 3/4 sleeves, a red cap, double-strand coral neck beads and coral wrist beads",
+				"Traditional attire for the groomsmen: a deep green set with 3/4 sleeves and matching trousers, a red cap, double-strand coral neck beads, coral wrist beads and black shoes",
 			guidance: [
-				"The groom's train wears a tailored olive-green set: a 3/4-sleeve top with matching trousers.",
-				"Finished with a traditional red cap, double-strand coral neck beads and coral wrist beads, with black shoes.",
+				"The groomsmen wear the deep green fabric we provide, sewn in the style you prefer. The picture shows a 3/4-sleeve top with matching trousers.",
+				"Finished with a traditional red cap, matching double-strand coral neck beads and coral wrist beads, with black shoes.",
 				"We'll share fabric, tailoring and payment details on WhatsApp once you register your interest.",
 			],
 		},
@@ -53,10 +53,12 @@ export const joinPageContent: InterestPageContent = {
 			id: "white",
 			label: "White Wedding",
 			date: "Saturday, December 26, 2026",
-			imageAlt: "Wedding train outfit for the White Wedding",
+			image: "/assets/outfits/groomsmen-white.webp",
+			imageAlt:
+				"Formal suit for the groomsmen: a charcoal two-piece suit with a crisp white dress shirt, burgundy tie and pocket square, and polished black Oxford shoes",
 			guidance: [
-				"The train wears a coordinated look for the church service and reception.",
-				"Colours of the day are Brown, Tan, Green, Black, Champagne Gold and Burgundy.",
+				"The groomsmen wear a charcoal suit in the premium wool fabric we provide, tailored in the style you prefer.",
+				"Paired with a crisp white dress shirt, a rich burgundy tie and pocket square, and polished black Oxford shoes.",
 				"We'll share outfit, tailoring and payment details on WhatsApp once you register your interest.",
 			],
 		},
@@ -80,10 +82,12 @@ export const asoebiPageContent: InterestPageContent = {
 			id: "traditional",
 			label: "Traditional",
 			date: "Wednesday, December 23, 2026",
-			imageAlt: "Asoebi fabric for the Traditional Marriage",
+			image: "/assets/outfits/asoebi-traditional.webp",
+			imageAlt:
+				"Asoebi for the Traditional Marriage: a fitted, off-the-shoulder burnt orange lace gown with an emerald green gele, a fine gold necklace and bracelet, and a gold clutch",
 			guidance: [
-				"Any traditional style is welcome — sew the asoebi fabric in the style you love.",
-				"Colours of the day are Brown, Green, Burnt Orange, Champagne Gold and Tan.",
+				"A burnt orange lace dress in the premium lace we provide, sewn in the style you prefer. The picture shows a fitted, off-the-shoulder gown.",
+				"Paired with an elegant green gele and minimal gold accessories: timeless and classy.",
 				"We'll share prices and how to get your fabric on WhatsApp once you register your interest.",
 			],
 		},
@@ -91,10 +95,12 @@ export const asoebiPageContent: InterestPageContent = {
 			id: "white",
 			label: "White Wedding",
 			date: "Saturday, December 26, 2026",
-			imageAlt: "Asoebi fabric for the White Wedding",
+			image: "/assets/outfits/asoebi-white.webp",
+			imageAlt:
+				"Bridesmaid dress for the White Wedding: a floor-length, off-the-shoulder burgundy gown in satin with lace panels, a fine gold necklace and bracelet, and a burgundy clutch",
 			guidance: [
-				"Elegant, church-appropriate styles in the asoebi fabric.",
-				"Colours of the day are Brown, Tan, Green, Black, Champagne Gold and Burgundy.",
+				"A rich burgundy gown in the premium lace and satin we provide, sewn in the style you prefer. The picture shows a floor-length, off-the-shoulder fit and flare.",
+				"Finished with delicate gold jewellery and a matching clutch.",
 				"We'll share prices and how to get your fabric on WhatsApp once you register your interest.",
 			],
 		},

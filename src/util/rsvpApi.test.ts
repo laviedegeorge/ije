@@ -14,6 +14,7 @@ const validForm = (extra: Record<string, string> = {}): FormData => {
 	const f = new FormData();
 	f.set(RSVP_FIELD.fullName, "Ada Okonkwo");
 	f.set(RSVP_FIELD.email, "ada@example.com");
+	f.set(RSVP_FIELD.phone, "+2348031234567");
 	f.set(RSVP_FIELD.countryResidence, "nigeria");
 	f.set(RSVP_FIELD.eventTraditional, "yes");
 	for (const [k, v] of Object.entries(extra)) f.set(k, v);

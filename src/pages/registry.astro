@@ -1,24 +1,29 @@
 ---
-export const prerender = false;
-
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import ComingSoonNotice from "@/components/ComingSoonNotice.astro";
-import { event } from "@/config/event";
+import RegistryContent from "@/components/registry/RegistryContent.astro";
+import { coupleNames, event } from "@/config/event";
 import { siteTitleSuffix } from "@/data/site-nav";
 
-// Once the registry is live, this page just forwards to it.
-if (!event.comingSoon.includes("registry") && event.registryHref) {
-	return Astro.redirect(event.registryHref, 302);
-}
+const description = `Gifts for ${coupleNames}’s wedding: cash gifts and bank transfers only, with account details.`;
+const canonicalHref = new URL("/registry", Astro.url.origin).href;
 ---
 
 <BaseLayout
 	title={`Registry · ${siteTitleSuffix}`}
+	description={description}
+	canonicalHref={canonicalHref}
 	loader={{ kind: "curtain", title: "Registry", photo: "/assets/loaders/registry.webp" }}
 >
-	<ComingSoonNotice
-		eyebrow="Registry"
-		title="Gifts & Registry"
-		message="Your presence is the greatest gift. For those who have asked, our registry details will be shared here soon."
-	/>
+	{
+		event.comingSoon.includes("registry") ? (
+			<ComingSoonNotice
+				eyebrow="Registry"
+				title="Gifts & Registry"
+				message="Your presence is the greatest gift. For those who have asked, our gift details will be shared here soon."
+			/>
+		) : (
+			<RegistryContent />
+		)
+	}
 </BaseLayout>

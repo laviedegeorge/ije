@@ -22,10 +22,10 @@ const appsScriptSecret = (): string =>
 
 export const isSheetsConfigured = (): boolean => Boolean(appsScriptUrl() && appsScriptSecret());
 
-type ScriptReply = { ok?: boolean; error?: string; values?: unknown };
+type ScriptReply = { ok?: boolean; error?: string; values?: unknown; code?: unknown };
 
 const callAppsScript = async (
-	action: "append" | "read" | "setStatus",
+	action: "append" | "read" | "setStatus" | "addGuest",
 	payload: Record<string, unknown>,
 ): Promise<{ ok: true; body: ScriptReply } | { ok: false; reason: "upstream" | "not_configured" }> => {
 	const url = appsScriptUrl();
@@ -84,6 +84,24 @@ export const setResponseStatus = async (
 ): Promise<SheetAppendResult> => {
 	const result = await callAppsScript("setStatus", { sheet: sheetName, submittedAt, code, status });
 	return result.ok ? { ok: true } : result;
+};
+
+export type NewGuest = {
+	name: string;
+	category: string;
+	plusOne: number;
+	asoebi: boolean;
+	groomsmen: boolean;
+};
+
+/** Adds a row to Guests; the script gives it a code (and fills the link columns). */
+export const addGuestToSheet = async (
+	guest: NewGuest,
+): Promise<{ ok: true; code: string } | { ok: false; reason: "upstream" | "not_configured" }> => {
+	const result = await callAppsScript("addGuest", guest);
+	if (!result.ok) return result;
+	const code = String(result.body.code ?? "");
+	return code ? { ok: true, code } : { ok: false, reason: "upstream" };
 };
 
 /** Reads a tab as text. The script only allows tabs listed in its READABLE_TABS. */

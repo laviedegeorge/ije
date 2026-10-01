@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildRsvpRecord, type RsvpFormValues } from "./rsvpForm";
-import { recordToSheetRows, sanitizeSheetCell } from "./rsvpSheet";
+import { parseRsvpRows, recordToSheetRows, RSVP_HEADERS, sanitizeSheetCell } from "./rsvpSheet";
 
 const baseValues = (): RsvpFormValues => ({
 	country_residence: "nigeria",
@@ -113,5 +113,22 @@ describe("sanitizeSheetCell", () => {
 		expect(sanitizeSheetCell("Ada")).toBe("Ada");
 		expect(sanitizeSheetCell("a+b")).toBe("a+b");
 		expect(sanitizeSheetCell("")).toBe("");
+	});
+});
+
+describe("parseRsvpRows", () => {
+	it("reads the RSVPs tab newest first, linking plus ones to their guest", () => {
+		const blank = (overrides: Record<string, string>) =>
+			RSVP_HEADERS.map((h) => overrides[h] ?? "");
+		const guests = parseRsvpRows([
+			[...RSVP_HEADERS],
+			blank({ "Submitted At": "2026-10-01T10:00:00Z", "Full Name": "Ada Obi", "Guest Role": "Primary", Phone: "+2348031234567", Country: "Nigeria", "Traditional Event": "Yes", "White Wedding": "No" }),
+			blank({ "Submitted At": "2026-10-01T10:00:00Z", "Full Name": "Jordan Lee", "Guest Role": "Plus one", "Primary Guest": "Ada Obi", "Traditional Event": "Yes" }),
+			blank({ "Submitted At": "2026-10-02T09:00:00Z", "Full Name": "Chidi Eze", "Guest Role": "Primary", Country: "United Kingdom", "White Wedding": "Yes" }),
+			blank({}),
+		]);
+		expect(guests.map((g) => g.name)).toEqual(["Chidi Eze", "Jordan Lee", "Ada Obi"]);
+		expect(guests[1]).toMatchObject({ plusOneOf: "Ada Obi", traditional: true, white: false });
+		expect(guests[2]).toMatchObject({ plusOneOf: "", phone: "+2348031234567", traditional: true });
 	});
 });

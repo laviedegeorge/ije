@@ -13,7 +13,8 @@ export type PageKey =
   | "thingsToDo"
   | "asoebi"
   | "rsvp"
-  | "join";
+  | "join"
+  | "registry";
 
 type Person = {
   /** Shown in the hero, page titles and the footer brand. */
@@ -32,7 +33,7 @@ export const event = {
   } satisfies Person,
 
   /** Production URL, used for canonical links and the sitemap. No trailing slash. */
-  siteUrl: "https://cynthiaandkelechi.com",
+  siteUrl: "https://ck-2026.vercel.app",
 
   /** Hero eyebrow on the home page. */
   dateLabel: "December 23 & 26, 2026",
@@ -53,17 +54,21 @@ export const event = {
     label: "October 31, 2026",
   },
 
-  /** Leave empty to hide the Registry link everywhere. */
-  registryHref: "https://www.zola.com/wedding/cynthiaandkelechi2026/registry",
-  /** Show "Registry" in the header and footer nav (the FAQ link is unaffected). */
-  showRegistryInNav: false,
+  /**
+   * Cash gifts and transfers, the only gifts the couple accepts. Shown on
+   * /registry. Leave accountName empty to hide that line.
+   */
+  gifts: {
+    bankName: "Moniepoint Microfinance Bank",
+    accountNumber: "8062242901",
+    accountName: "",
+  },
 
   /**
    * Pages that show a "Coming soon" notice instead of their content. They stay
-   * in the nav. Remove an entry once it's ready (for the registry, /registry then
-   * forwards to registryHref and the nav links straight to it).
+   * in the nav. Remove an entry once it's ready.
    */
-  comingSoon: ["travel", "registry"] as ("travel" | "registry")[],
+  comingSoon: ["travel"] as ("travel" | "registry")[],
 
   /**
    * Tab names in the Google Sheet. They must match TABS in apps-script/Code.gs,
@@ -91,6 +96,7 @@ export const event = {
     asoebi: true,
     rsvp: true,
     join: true,
+    registry: true,
   } satisfies Record<PageKey, boolean>,
 };
 
@@ -102,6 +108,7 @@ export const pagePaths: Record<PageKey, string> = {
   asoebi: "/asoebi",
   rsvp: "/rsvp",
   join: "/join",
+  registry: "/registry",
 };
 
 /** API routes that only exist to serve a page; they are switched off with it. */

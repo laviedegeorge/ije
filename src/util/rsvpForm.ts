@@ -56,8 +56,8 @@ export type RsvpRecord = {
 	country_residence: CountryResidence;
 	other_country: string | null;
 	full_name: string;
-	email: string;
-	phone: string | null;
+	email: string | null;
+	phone: string;
 	party_size: number;
 	plus_one_name: string | null;
 	event_traditional: boolean;
@@ -163,15 +163,16 @@ export const validateRsvpForm = (raw: ReturnType<typeof parseRsvpFormData>): Rsv
 		fieldErrors[RSVP_FIELD.fullName] = "Name is too long.";
 	}
 
-	if (!raw.email) {
-		fieldErrors[RSVP_FIELD.email] = "Enter your email address.";
-	} else if (raw.email.length > RSVP_MAX_LEN.email) {
+	// Email is optional; the phone number is how the couple reaches guests.
+	if (raw.email.length > RSVP_MAX_LEN.email) {
 		fieldErrors[RSVP_FIELD.email] = "Email is too long.";
-	} else if (!EMAIL_RE.test(raw.email)) {
+	} else if (raw.email && !EMAIL_RE.test(raw.email)) {
 		fieldErrors[RSVP_FIELD.email] = "Enter a valid email address.";
 	}
 
-	if (raw.phone) {
+	if (!raw.phone) {
+		fieldErrors[RSVP_FIELD.phone] = "Enter your phone number.";
+	} else {
 		if (raw.phone.length > RSVP_MAX_LEN.phone) {
 			fieldErrors[RSVP_FIELD.phone] = "Phone number is too long.";
 		} else if (!PHONE_WITH_COUNTRY_RE.test(raw.phone)) {
@@ -260,8 +261,8 @@ export const buildRsvpRecord = (values: RsvpFormValues): RsvpRecord => ({
 	country_residence: values.country_residence,
 	other_country: values.other_country.trim() ? values.other_country.trim() : null,
 	full_name: values.full_name,
-	email: values.email,
-	phone: values.phone.trim() ? values.phone.trim() : null,
+	email: values.email ? values.email : null,
+	phone: values.phone.trim(),
 	party_size: values.party_size,
 	plus_one_name: values.plus_one_name.trim() ? values.plus_one_name.trim() : null,
 	event_traditional: values.event_traditional,

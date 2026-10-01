@@ -1,0 +1,265 @@
+---
+import ContentCard from "@/components/ContentCard.astro";
+import HeroPageSurface from "@/components/HeroPageSurface.astro";
+import { coupleNames, event } from "@/config/event";
+
+const { bankName, accountNumber, accountName } = event.gifts;
+---
+
+<HeroPageSurface bgSrc="/assets/couple/6.webp" surfaceClass="registry-page" ariaLabelledBy="registry-heading">
+	<ContentCard variant="secondary" class="registry-page__card" data-reveal>
+		<p class="registry-page__eyebrow">Registry</p>
+		<h1 id="registry-heading" class="registry-page__title">Gifts</h1>
+
+		<div class="registry-page__lede">
+			<p>
+				Your presence is truly the greatest gift, and celebrating with you means the world to us.
+			</p>
+			<p>
+				For those who have kindly asked how to bless us, we've decided not to keep a gift
+				registry. Instead, we're accepting <strong>cash gifts and bank transfers only</strong>.
+				Thank you for understanding, and for every kind thought.
+			</p>
+		</div>
+
+		<section class="registry-page__account" aria-labelledby="registry-account-heading">
+			<h2 id="registry-account-heading" class="registry-page__section-title">Bank transfer</h2>
+			<dl class="registry-page__details">
+				<div class="registry-page__detail">
+					<dt>Account number</dt>
+					<dd class="registry-page__number-row">
+						<span class="registry-page__number">{accountNumber}</span>
+						<button
+							type="button"
+							class="registry-page__copy"
+							data-copy-value={accountNumber}
+							aria-label="Copy account number"
+						>
+							Copy
+						</button>
+					</dd>
+				</div>
+				<div class="registry-page__detail">
+					<dt>Bank</dt>
+					<dd>{bankName}</dd>
+				</div>
+				{
+					accountName ? (
+						<div class="registry-page__detail">
+							<dt>Account name</dt>
+							<dd>{accountName}</dd>
+						</div>
+					) : null
+				}
+			</dl>
+			<p class="registry-page__copy-status" role="status" aria-live="polite" data-copy-status></p>
+		</section>
+
+		<section class="registry-page__abroad" aria-labelledby="registry-abroad-heading">
+			<h2 id="registry-abroad-heading" class="registry-page__section-title">Giving from abroad?</h2>
+			<p>
+				Please reach out to us directly and we'll let you know the easiest way to send your gift.
+				You can also leave us a note in the message box when you <a href="/rsvp">RSVP</a>.
+			</p>
+		</section>
+
+		<p class="registry-page__signoff">
+			With love and gratitude,<br />
+			<span>{coupleNames}</span>
+		</p>
+	</ContentCard>
+</HeroPageSurface>
+
+<script>
+	function initCopyButtons() {
+		const status = document.querySelector<HTMLElement>("[data-copy-status]");
+		let resetTimer: number | undefined;
+
+		document.querySelectorAll<HTMLButtonElement>("[data-copy-value]").forEach((button) => {
+			button.addEventListener("click", async () => {
+				const value = button.dataset.copyValue ?? "";
+				let copied = false;
+				try {
+					await navigator.clipboard.writeText(value);
+					copied = true;
+				} catch {
+					copied = false;
+				}
+
+				button.textContent = copied ? "Copied" : "Copy";
+				if (status) {
+					status.textContent = copied
+						? "Account number copied."
+						: "Couldn't copy. Please copy the number manually.";
+				}
+
+				window.clearTimeout(resetTimer);
+				resetTimer = window.setTimeout(() => {
+					button.textContent = "Copy";
+					if (status) status.textContent = "";
+				}, 2500);
+			});
+		});
+	}
+
+	initCopyButtons();
+</script>
+
+<style>
+	:global(.content-card.registry-page__card) {
+		width: min(100%, 36rem);
+		margin-inline: auto;
+		text-align: center;
+	}
+
+	.registry-page__eyebrow {
+		margin: 0 0 0.65rem;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: rgb(92 74 61 / 0.75);
+	}
+
+	.registry-page__title {
+		margin: 0;
+		font-size: clamp(2.25rem, 6vw, 3.25rem);
+		font-weight: 400;
+		line-height: 1.1;
+	}
+
+	.registry-page__lede {
+		margin: 1.1rem 0 0;
+		color: var(--text-muted);
+		line-height: 1.6;
+	}
+
+	.registry-page__lede p {
+		margin: 0 0 0.75rem;
+	}
+
+	.registry-page__lede strong {
+		color: var(--text-primary);
+	}
+
+	.registry-page__section-title {
+		margin: 0 0 0.85rem;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: #6e523c;
+	}
+
+	.registry-page__account {
+		margin: 1.25rem 0 0;
+		padding: clamp(1.1rem, 3vw, 1.5rem);
+		border: 1px solid rgb(214 178 138 / 0.55);
+		border-radius: 1rem;
+		background: linear-gradient(
+			135deg,
+			rgb(255 251 243 / 0.9) 0%,
+			rgb(245 232 214 / 0.82) 52%,
+			rgb(255 246 236 / 0.88) 100%
+		);
+		box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.75);
+	}
+
+	.registry-page__details {
+		display: grid;
+		gap: 0.85rem;
+		margin: 0;
+	}
+
+	.registry-page__detail dt {
+		font-size: 0.78rem;
+		color: var(--text-muted);
+	}
+
+	.registry-page__detail dd {
+		margin: 0.2rem 0 0;
+		font-weight: 600;
+	}
+
+	.registry-page__number-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem 0.75rem;
+	}
+
+	.registry-page__number {
+		font-size: clamp(1.6rem, 6vw, 2rem);
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		font-variant-numeric: tabular-nums;
+		color: var(--text-primary);
+	}
+
+	.registry-page__copy {
+		padding: 0.4rem 0.95rem;
+		border-radius: 9999px;
+		border: 1px solid rgb(110 82 60 / 0.35);
+		background: rgb(255 255 255 / 0.55);
+		color: #6e523c;
+		font: inherit;
+		font-size: 0.8rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	.registry-page__copy:hover {
+		background: rgb(255 255 255 / 0.85);
+	}
+
+	.registry-page__copy:focus-visible {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: 2px;
+	}
+
+	.registry-page__copy-status {
+		min-height: 1.25em;
+		margin: 0.6rem 0 0;
+		font-size: 0.8rem;
+		color: var(--text-muted);
+	}
+
+	.registry-page__abroad {
+		margin: 1.5rem 0 0;
+		padding-top: 1.35rem;
+		border-top: 1px solid rgb(96 72 53 / 0.18);
+	}
+
+	.registry-page__abroad p {
+		margin: 0;
+		color: var(--text-muted);
+		line-height: 1.6;
+	}
+
+	.registry-page__abroad a {
+		color: #6e523c;
+		font-weight: 600;
+		text-decoration: underline;
+		text-decoration-color: rgb(91 66 50 / 0.5);
+		text-underline-offset: 0.14em;
+	}
+
+	.registry-page__abroad a:hover {
+		text-decoration-color: rgb(91 66 50 / 0.85);
+	}
+
+	.registry-page__signoff {
+		margin: 1.75rem 0 0;
+		color: var(--text-muted);
+		font-style: italic;
+		line-height: 1.6;
+	}
+
+	.registry-page__signoff span {
+		font-style: normal;
+		font-weight: 700;
+		color: var(--text-primary);
+	}
+</style>

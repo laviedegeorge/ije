@@ -1,19 +1,31 @@
 ---
 /**
- * Admin view: Asoebi and Groomsmen responses (confirm / decline) and a guest
- * list summary. Confirming updates the guest's row on the Guests tab.
+ * Admin view: Asoebi and Groomsmen responses (confirm / decline), the people
+ * invited to them with their personal links, and the guest list from the RSVPs
+ * tab. Confirming updates the guest's row on the Guests tab.
  */
-import type { Guest } from "@/util/inviteList";
 import type { InterestResponse } from "@/util/interestSheet";
+import type { Guest } from "@/util/inviteList";
+import { GUEST_CATEGORIES, inviteLink, type InviteKind } from "@/util/inviteLinks";
+import type { RsvpGuest } from "@/util/rsvpSheet";
 
 interface Props {
 	/** null when the tab couldn't be read. */
 	asoebi: InterestResponse[] | null;
 	groomsmen: InterestResponse[] | null;
-	guests: Guest[] | null;
+	rsvps: RsvpGuest[] | null;
+	/** Guests ticked for asoebi and/or groomsmen. */
+	invitees: Guest[] | null;
+	/** The address the admin page is open on, for building links. */
+	origin: string;
 }
 
-const { asoebi, groomsmen, guests } = Astro.props;
+const { asoebi, groomsmen, rsvps, invitees, origin } = Astro.props;
+
+const inviteKinds = (g: Guest): { kind: InviteKind; label: string }[] => [
+	...(g.asoebi ? [{ kind: "asoebi" as const, label: "Asoebi" }] : []),
+	...(g.groomsmen ? [{ kind: "groomsmen" as const, label: "Groomsmen" }] : []),
+];
 
 const lists = [
 	{ id: "asoebi", label: "Asoebi", rows: asoebi },
@@ -23,18 +35,19 @@ const lists = [
 const pendingCount = (rows: InterestResponse[] | null) =>
 	rows?.filter((r) => r.status === "Pending").length ?? 0;
 
-const categories = new Map<string, { people: number; plusOnes: number }>();
-for (const g of guests ?? []) {
-	const key = g.category || "Uncategorised";
-	const entry = categories.get(key) ?? { people: 0, plusOnes: 0 };
-	entry.people += 1;
-	entry.plusOnes += g.plusOne;
-	categories.set(key, entry);
-}
-const totals = [...categories.values()].reduce(
-	(t, c) => ({ people: t.people + c.people, plusOnes: t.plusOnes + c.plusOnes }),
-	{ people: 0, plusOnes: 0 },
-);
+// Every row on the RSVPs tab is one attending person (a plus one has their own row).
+const guests = rsvps ?? [];
+const summary = [
+	{ label: "Attending", count: guests.length },
+	{ label: "RSVPs", count: guests.filter((g) => !g.plusOneOf).length },
+	{ label: "Plus ones", count: guests.filter((g) => g.plusOneOf).length },
+	{ label: "Traditional", count: guests.filter((g) => g.traditional).length },
+	{ label: "White Wedding", count: guests.filter((g) => g.white).length },
+	{ label: "From abroad", count: guests.filter((g) => g.country && g.country !== "Nigeria").length },
+];
+const eventsLabel = (g: RsvpGuest) =>
+	[g.traditional && "Traditional", g.white && "White"].filter(Boolean).join(" + ");
+const travelLabel = (g: RsvpGuest) => [g.arrival, g.departure].filter(Boolean).join(" → ");
 
 const formatDate = (iso: string) => {
 	const d = new Date(iso);
@@ -47,11 +60,108 @@ const formatDate = (iso: string) => {
 <section class="dash" data-admin-dashboard>
 	<header class="dash__head">
 		<h1 class="dash__title">Admin</h1>
-		<form method="post" action="/api/admin/login">
-			<input type="hidden" name="logout" value="1" />
-			<button type="submit" class="dash__signout">Sign out</button>
-		</form>
+		<div class="dash__head-actions">
+			<button type="button" class="dash__action dash__action--confirm" data-open-invite>
+				Invite
+			</button>
+			<button type="button" class="dash__action dash__action--confirm" data-open-rsvp-link>
+				RSVP link
+			</button>
+			<form method="post" action="/api/admin/login">
+				<input type="hidden" name="logout" value="1" />
+				<button type="submit" class="dash__signout">Sign out</button>
+			</form>
+		</div>
 	</header>
+
+	<dialog class="dash__dialog" aria-labelledby="rsvp-link-title" data-rsvp-link-dialog>
+		<div class="dash__dialog-body">
+			<div class="dash__dialog-head">
+				<h2 id="rsvp-link-title" class="dash__dialog-title">RSVP link</h2>
+				<button type="button" class="dash__close" data-close-dialog aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<form class="dash__link-form" data-rsvp-link-form>
+				<label class="dash__label" for="rsvp-link-name">Name to greet</label>
+				<input
+					id="rsvp-link-name"
+					class="dash__input"
+					type="text"
+					maxlength="80"
+					autocomplete="off"
+					placeholder="Mr. & Mrs. Anderson"
+					data-rsvp-link-name
+				/>
+				<p class="dash__hint">Shown exactly as typed: “Hi Mr. &amp; Mrs. Anderson,”</p>
+
+				<label class="dash__label" for="rsvp-link-output">Link</label>
+				<input id="rsvp-link-output" class="dash__input dash__input--link" type="text" readonly data-rsvp-link-output />
+
+				<div class="dash__dialog-actions">
+					<button type="submit" class="dash__action dash__action--confirm" data-copy-rsvp-link disabled>Copy link</button>
+					<a class="dash__action dash__action--link" href="#" target="_blank" rel="noopener noreferrer" data-share-rsvp-link aria-disabled="true">
+						Share on WhatsApp
+					</a>
+				</div>
+				<p class="dash__hint" role="status" aria-live="polite" data-rsvp-link-status></p>
+			</form>
+		</div>
+	</dialog>
+
+	<dialog class="dash__dialog" aria-labelledby="invite-title" data-invite-dialog>
+		<div class="dash__dialog-body">
+			<div class="dash__dialog-head">
+				<h2 id="invite-title" class="dash__dialog-title">Invite to asoebi / groomsmen</h2>
+				<button type="button" class="dash__close" data-close-dialog aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+
+			<form class="dash__link-form" data-invite-form novalidate>
+				<label class="dash__label" for="invite-name">Name</label>
+				<input id="invite-name" class="dash__input" type="text" name="name" maxlength="100" autocomplete="off" required />
+
+				<label class="dash__label" for="invite-category">Category</label>
+				<select id="invite-category" class="dash__input" name="category" required>
+					<option value="">Choose…</option>
+					{GUEST_CATEGORIES.map((c) => <option value={c}>{c}</option>)}
+				</select>
+
+				<label class="dash__label" for="invite-plus-one">Plus ones</label>
+				<input id="invite-plus-one" class="dash__input dash__input--short" type="number" name="plusOne" min="0" max="10" value="0" inputmode="numeric" />
+
+				<fieldset class="dash__checks">
+					<legend class="dash__label">Invite to</legend>
+					<label><input type="checkbox" name="asoebi" /> Asoebi</label>
+					<label><input type="checkbox" name="groomsmen" /> Groomsmen</label>
+				</fieldset>
+
+				<p class="dash__error" role="alert" data-invite-error hidden></p>
+				<div class="dash__dialog-actions">
+					<button type="submit" class="dash__action dash__action--confirm" data-invite-submit>Add and get link</button>
+				</div>
+			</form>
+
+			<div class="dash__link-form" data-invite-result hidden>
+				<p class="dash__hint dash__hint--lead" data-invite-added></p>
+				{(["asoebi", "groomsmen"] as const).map((kind) => (
+					<div class="dash__invite-link" data-invite-link={kind} hidden>
+						<label class="dash__label" for={`invite-link-${kind}`}>{kind === "asoebi" ? "Asoebi link" : "Groomsmen link"}</label>
+						<input id={`invite-link-${kind}`} class="dash__input dash__input--link" type="text" readonly data-link-output />
+						<div class="dash__dialog-actions">
+							<button type="button" class="dash__action dash__action--confirm" data-copy-link>Copy link</button>
+							<a class="dash__action dash__action--link" href="#" target="_blank" rel="noopener noreferrer" data-share-link>Share on WhatsApp</a>
+						</div>
+					</div>
+				))}
+				<p class="dash__hint" role="status" aria-live="polite" data-invite-status></p>
+				<div class="dash__dialog-actions">
+					<button type="button" class="dash__action" data-invite-again>Invite someone else</button>
+				</div>
+			</div>
+		</div>
+	</dialog>
 
 	<div class="dash__tabs" role="tablist" aria-label="Lists">
 		{lists.map((list, i) => (
@@ -68,6 +178,17 @@ const formatDate = (iso: string) => {
 				{pendingCount(list.rows) ? <span class="dash__badge">{pendingCount(list.rows)}</span> : null}
 			</button>
 		))}
+		<button
+			type="button"
+			role="tab"
+			class="dash__tab"
+			id="dash-tab-invites"
+			aria-controls="dash-panel-invites"
+			aria-selected="false"
+			tabindex="-1"
+		>
+			Invitations
+		</button>
 		<button
 			type="button"
 			role="tab"
@@ -97,7 +218,7 @@ const formatDate = (iso: string) => {
 									{r.events} · {formatDate(r.submittedAt)} · {r.code}
 								</p>
 								<p class="dash__meta">
-									<a href={`mailto:${r.email}`}>{r.email}</a> ·{" "}
+									{r.email && <><a href={`mailto:${r.email}`}>{r.email}</a> ·{" "}</>}
 									<a href={`https://wa.me/${r.whatsapp.replace(/\D/g, "").replace(/^0/, "234")}`} target="_blank" rel="noopener noreferrer">{r.whatsapp}</a>
 								</p>
 							</div>
@@ -113,35 +234,81 @@ const formatDate = (iso: string) => {
 		</section>
 	))}
 
-	<section class="dash__panel" role="tabpanel" id="dash-panel-guests" aria-labelledby="dash-tab-guests" hidden>
-		{guests === null ? (
+	<section class="dash__panel" role="tabpanel" id="dash-panel-invites" aria-labelledby="dash-tab-invites" hidden>
+		{invitees === null ? (
 			<p class="dash__empty">Couldn't read the Guests tab. Check the Apps Script setup and reload.</p>
+		) : invitees.length === 0 ? (
+			<p class="dash__empty">No one has been invited to asoebi or groomsmen yet. Use <strong>Invite</strong> above.</p>
+		) : (
+			<ul class="dash__responses">
+				{invitees.map((g) => (
+					<li class="dash__response dash__invitee">
+						<div class="dash__who">
+							<p class="dash__name">{g.name}</p>
+							<p class="dash__meta">
+								{[g.category, g.plusOne ? `+${g.plusOne}` : "", g.code].filter(Boolean).join(" · ")}
+							</p>
+						</div>
+						<div class="dash__invitee-links">
+							{inviteKinds(g).map(({ kind, label }) => {
+								const link = inviteLink(origin, kind, g.name, g.code);
+								return (
+									<div class="dash__invitee-link">
+										<span class="dash__status">{label}</span>
+										<button type="button" class="dash__action dash__action--confirm" data-copy-value={link} title={link}>
+											Copy link
+										</button>
+										<a class="dash__action dash__action--link" href={`https://wa.me/?text=${encodeURIComponent(link)}`} target="_blank" rel="noopener noreferrer">
+											WhatsApp
+										</a>
+									</div>
+								);
+							})}
+						</div>
+					</li>
+				))}
+			</ul>
+		)}
+	</section>
+
+	<section class="dash__panel" role="tabpanel" id="dash-panel-guests" aria-labelledby="dash-tab-guests" hidden>
+		{rsvps === null ? (
+			<p class="dash__empty">Couldn't read the RSVPs tab. Check the Apps Script setup and reload.</p>
+		) : rsvps.length === 0 ? (
+			<p class="dash__empty">No RSVPs yet.</p>
 		) : (
 			<>
-				<table class="dash__table">
-					<thead>
-						<tr><th>Category</th><th>Guests</th><th>Plus ones</th><th>Total</th></tr>
-					</thead>
-					<tbody>
-						{[...categories.entries()].map(([name, c]) => (
-							<tr><td>{name}</td><td>{c.people}</td><td>{c.plusOnes}</td><td>{c.people + c.plusOnes}</td></tr>
-						))}
-					</tbody>
-					<tfoot>
-						<tr><th>All</th><th>{totals.people}</th><th>{totals.plusOnes}</th><th>{totals.people + totals.plusOnes}</th></tr>
-					</tfoot>
-				</table>
+				<dl class="dash__summary">
+					{summary.map((item) => (
+						<div class="dash__stat">
+							<dt>{item.label}</dt>
+							<dd>{item.count}</dd>
+						</div>
+					))}
+				</dl>
 
-				<table class="dash__table dash__table--guests">
-					<thead>
-						<tr><th>Name</th><th>Category</th><th>Source</th><th>Plus one</th></tr>
-					</thead>
-					<tbody>
-						{guests.map((g) => (
-							<tr><td>{g.name}</td><td>{g.category}</td><td>{g.source || "Direct"}</td><td>{g.plusOne || ""}</td></tr>
-						))}
-					</tbody>
-				</table>
+				<div class="dash__table-scroll">
+					<table class="dash__table dash__table--guests">
+						<thead>
+							<tr><th>Name</th><th>Events</th><th>Phone</th><th>From</th><th>Travel</th><th>RSVPed</th></tr>
+						</thead>
+						<tbody>
+							{rsvps.map((g) => (
+								<tr>
+									<td>
+										{g.name}
+										{g.plusOneOf && <span class="dash__plus-one">Plus one of {g.plusOneOf}</span>}
+									</td>
+									<td data-label="Events">{eventsLabel(g)}</td>
+									<td data-label="Phone">{g.phone && <a href={`tel:${g.phone}`}>{g.phone}</a>}</td>
+									<td data-label="From">{g.country}</td>
+									<td data-label="Travel">{travelLabel(g)}</td>
+									<td data-label="RSVPed">{formatDate(g.submittedAt)}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
 			</>
 		)}
 	</section>
@@ -161,8 +328,10 @@ const formatDate = (iso: string) => {
 
 	.dash__head {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
+		gap: 0.75rem 1rem;
 		margin-bottom: 1.25rem;
 	}
 
@@ -172,9 +341,18 @@ const formatDate = (iso: string) => {
 		font-weight: 400;
 	}
 
+	.dash__head-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem 0.75rem;
+	}
+
 	.dash__signout {
+		padding: 0.5rem 0.25rem;
 		border: none;
 		background: none;
+		white-space: nowrap;
 		color: var(--text-muted);
 		font: inherit;
 		text-decoration: underline;
@@ -183,9 +361,14 @@ const formatDate = (iso: string) => {
 
 	.dash__tabs {
 		display: flex;
-		flex-wrap: wrap;
 		gap: 0.35rem;
 		width: fit-content;
+		max-width: 100%;
+		box-sizing: border-box;
+		/* One row; scrolls sideways rather than wrapping if it ever runs out of room. */
+		overflow-x: auto;
+		scrollbar-width: none;
+		-webkit-overflow-scrolling: touch;
 		margin-bottom: 1.25rem;
 		padding: 0.3rem;
 		border-radius: 9999px;
@@ -193,7 +376,27 @@ const formatDate = (iso: string) => {
 		border: 1px solid rgb(255 255 255 / 0.8);
 	}
 
+	.dash__tabs::-webkit-scrollbar {
+		display: none;
+	}
+
+	/* Phones: all tabs visible at once, two per row. */
+	@media (max-width: 640px) {
+		.dash__tabs {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			width: 100%;
+			border-radius: 1.25rem;
+		}
+
+		.dash__tab {
+			justify-content: center;
+		}
+	}
+
 	.dash__tab {
+		flex-shrink: 0;
+		white-space: nowrap;
 		display: inline-flex;
 		align-items: center;
 		gap: 0.4rem;
@@ -287,6 +490,12 @@ const formatDate = (iso: string) => {
 	}
 
 	.dash__action {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 2.5rem;
+		box-sizing: border-box;
+		white-space: nowrap;
 		padding: 0.45rem 0.9rem;
 		border-radius: 9999px;
 		border: 1px solid rgb(110 82 60 / 0.35);
@@ -308,6 +517,221 @@ const formatDate = (iso: string) => {
 		cursor: default;
 	}
 
+	.dash__action--link {
+		text-decoration: none;
+	}
+
+	.dash__action--link[aria-disabled="true"] {
+		opacity: 0.45;
+		pointer-events: none;
+	}
+
+	.dash__dialog {
+		/* Tailwind's reset zeroes margins; restore the browser's modal centring */
+		margin: auto;
+		width: min(30rem, calc(100vw - 2rem));
+		padding: 0;
+		border: 1px solid rgb(255 255 255 / 0.7);
+		border-radius: 1.25rem;
+		background: #f7f2eb;
+		color: var(--text-primary);
+		box-shadow: 0 24px 60px rgb(20 14 10 / 0.3);
+		font-family: var(--font-body);
+	}
+
+	.dash__dialog::backdrop {
+		background: rgb(30 20 12 / 0.45);
+		backdrop-filter: blur(4px);
+	}
+
+	/* Padding lives here so a click on the dialog element itself means the backdrop. */
+	.dash__dialog-body {
+		padding: clamp(1.25rem, 4vw, 1.75rem);
+	}
+
+	.dash__dialog-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 1rem;
+	}
+
+	.dash__dialog-title {
+		margin: 0;
+		font-size: 1.5rem;
+		font-weight: 400;
+	}
+
+	.dash__close {
+		border: none;
+		background: none;
+		color: var(--text-muted);
+		font-size: 1.6rem;
+		line-height: 1;
+		cursor: pointer;
+	}
+
+	.dash__link-form {
+		display: grid;
+		gap: 0.5rem;
+	}
+
+	.dash__label {
+		font-size: 0.84rem;
+		font-weight: 600;
+	}
+
+	.dash__input {
+		width: 100%;
+		box-sizing: border-box;
+		padding: 0.7rem 0.9rem;
+		border-radius: 0.55rem;
+		border: 1px solid rgb(110 82 60 / 0.22);
+		background: rgb(255 252 247 / 0.92);
+		font: inherit;
+	}
+
+	.dash__input--link {
+		color: var(--text-muted);
+		font-size: 0.85rem;
+	}
+
+	.dash__input--short {
+		max-width: 6rem;
+	}
+
+	.dash__checks {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.25rem;
+		margin: 0.25rem 0 0.5rem;
+		padding: 0;
+		border: none;
+	}
+
+	.dash__checks legend {
+		margin-bottom: 0.35rem;
+		padding: 0;
+	}
+
+	.dash__checks label {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.35rem 0;
+		cursor: pointer;
+	}
+
+	.dash__checks input {
+		width: 1.2rem;
+		height: 1.2rem;
+		margin: 0;
+		accent-color: #6e523c;
+	}
+
+	.dash__error {
+		margin: 0;
+		font-size: 0.85rem;
+		color: rgb(150 45 35);
+	}
+
+	.dash__invite-link {
+		display: grid;
+		gap: 0.5rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.dash__invite-link[hidden],
+	.dash__link-form[hidden] {
+		display: none;
+	}
+
+	.dash__hint--lead {
+		font-size: 0.95rem;
+		color: var(--text-primary);
+	}
+
+	.dash__hint {
+		min-height: 1.2em;
+		margin: 0 0 0.5rem;
+		font-size: 0.8rem;
+		color: var(--text-muted);
+	}
+
+	.dash__dialog-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+	}
+
+	.dash__invitee-links {
+		display: grid;
+		gap: 0.5rem;
+	}
+
+	.dash__invitee-link {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	/* Six totals: 2 per row on phones, 3 on tablets, all in one row on wide screens. */
+	.dash__summary {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.6rem;
+		margin: 0 0 1.25rem;
+	}
+
+	@media (min-width: 641px) {
+		.dash__summary {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+
+	@media (min-width: 960px) {
+		.dash__summary {
+			grid-template-columns: repeat(6, minmax(0, 1fr));
+		}
+	}
+
+	.dash__stat {
+		padding: 0.75rem 1rem;
+		border-radius: 1rem;
+		background: rgb(255 255 255 / 0.6);
+		border: 1px solid rgb(255 255 255 / 0.8);
+	}
+
+	.dash__stat dt {
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.dash__stat dd {
+		margin: 0.2rem 0 0;
+		font-size: 1.6rem;
+		font-weight: 700;
+	}
+
+	.dash__table-scroll {
+		overflow-x: auto;
+		border-radius: 1rem;
+	}
+
+	.dash__plus-one {
+		display: block;
+		font-size: 0.78rem;
+		color: var(--text-muted);
+	}
+
+	.dash__table a {
+		color: inherit;
+	}
+
 	.dash__table {
 		width: 100%;
 		margin-bottom: 1.5rem;
@@ -325,7 +749,65 @@ const formatDate = (iso: string) => {
 		border-bottom: 1px solid rgb(110 82 60 / 0.12);
 	}
 
-	.dash__table tfoot th {
-		border-bottom: none;
+	/* Phones: each guest becomes a card, each cell a "Label  value" line. */
+	@media (max-width: 640px) {
+		.dash__table--guests,
+		.dash__table--guests tbody,
+		.dash__table--guests tr,
+		.dash__table--guests td {
+			display: block;
+		}
+
+		.dash__table--guests {
+			background: none;
+		}
+
+		.dash__table--guests thead {
+			display: none;
+		}
+
+		.dash__table--guests tr {
+			margin-bottom: 0.65rem;
+			padding: 0.75rem 1rem;
+			border-radius: 1rem;
+			background: rgb(255 255 255 / 0.6);
+			border: 1px solid rgb(255 255 255 / 0.8);
+		}
+
+		.dash__table--guests td {
+			display: flex;
+			justify-content: space-between;
+			gap: 1rem;
+			padding: 0.3rem 0;
+			border: none;
+			text-align: right;
+		}
+
+		.dash__table--guests td:empty {
+			display: none;
+		}
+
+		.dash__table--guests td::before {
+			content: attr(data-label);
+			flex-shrink: 0;
+			font-size: 0.75rem;
+			font-weight: 700;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+			color: var(--text-muted);
+			text-align: left;
+		}
+
+		.dash__table--guests td:first-child {
+			display: block;
+			padding-bottom: 0.4rem;
+			font-weight: 700;
+			text-align: left;
+		}
+
+		.dash__table--guests td:first-child::before {
+			content: none;
+		}
 	}
+
 </style>

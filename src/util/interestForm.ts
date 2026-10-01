@@ -63,11 +63,10 @@ export const validateInterestForm = (raw: InterestRawFields): InterestValidation
 		fieldErrors[INTEREST_FIELD.fullName] = "Name is too long.";
 	}
 
-	if (!raw.email) {
-		fieldErrors[INTEREST_FIELD.email] = "Enter your email address.";
-	} else if (raw.email.length > INTEREST_MAX_LEN.email) {
+	// Email is optional; the WhatsApp number is how the couple follows up.
+	if (raw.email.length > INTEREST_MAX_LEN.email) {
 		fieldErrors[INTEREST_FIELD.email] = "Email is too long.";
-	} else if (!EMAIL_RE.test(raw.email)) {
+	} else if (raw.email && !EMAIL_RE.test(raw.email)) {
 		fieldErrors[INTEREST_FIELD.email] = "Enter a valid email address.";
 	}
 

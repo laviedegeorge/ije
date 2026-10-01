@@ -15,13 +15,16 @@
  *
  * The site POSTs JSON { secret, action, ... }:
  *   append     { sheet, headers?, rows }             add rows (tab created if missing)
- *   read       { sheet }                             tab values as text (READABLE_TABS only)
+ *   read       { sheet }                             tab values as text (READABLE_TABS only;
+ *                                                    the admin page reads RSVPs for its guest list)
  *   setStatus  { sheet, submittedAt, code, status }  update a response's Status
+ *   addGuest   { name, category, plusOne, asoebi, groomsmen }
+ *                                                    add a Guests row; replies with its code
  * Replies are JSON: { ok: true, values? } or { ok: false, error }.
  */
 
 /** Your site's address, no trailing slash. Used to build personal links. */
-const SITE_URL = "https://cynthiaandkelechi.com";
+const SITE_URL = "https://ck-2026.vercel.app";
 
 const TABS = { guests: "Guests", asoebi: "Asoebi", groomsmen: "Groomsmen", rsvps: "RSVPs" };
 
@@ -43,7 +46,7 @@ const RESPONSE_TABS = {
   Groomsmen: { source: "Groomsmen", flag: "Groomsmen", linkHeader: "Groomsmen Link", path: "/join" },
 };
 
-const READABLE_TABS = [TABS.guests, TABS.asoebi, TABS.groomsmen];
+const READABLE_TABS = [TABS.guests, TABS.asoebi, TABS.groomsmen, TABS.rsvps];
 const PROTECTION_NOTE = "Filled by the website — edit through /admin or ask the sheet owner";
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no 0/O, 1/I/L
 const ROWS_TO_FORMAT = 1000;
@@ -65,6 +68,7 @@ function doPost(e) {
     if (body.action === "append") return reply_(append_(body));
     if (body.action === "read") return reply_(read_(body));
     if (body.action === "setStatus") return reply_(setStatus_(body));
+    if (body.action === "addGuest") return reply_(addGuest_(body));
     return reply_({ ok: false, error: "unknown_action" });
   } catch (err) {
     console.error(err);
@@ -120,6 +124,37 @@ function setStatus_(body) {
       }
     }
     return { ok: false, error: "no_such_response" };
+  });
+}
+
+/** Adds a person to Guests from the admin page; the code and links are filled as for a typed row. */
+function addGuest_(body) {
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const plusOne = Number(body.plusOne);
+  if (!name || CATEGORIES.indexOf(body.category) === -1 || !(plusOne >= 0 && plusOne <= 10)) {
+    return { ok: false, error: "bad_request" };
+  }
+  return withLock_(function () {
+    const guests = tabOrCreate_(TABS.guests);
+    const cols = headerIndex_(guests);
+    if (cols["Name"] === undefined || cols["Code"] === undefined) return { ok: false, error: "no_such_tab" };
+
+    const row = new Array(guests.getLastColumn()).fill("");
+    row[cols["Name"]] = name;
+    row[cols["Category"]] = body.category;
+    row[cols["Plus One"]] = Math.floor(plusOne);
+    row[cols["Asoebi"]] = body.asoebi === true;
+    row[cols["Groomsmen"]] = body.groomsmen === true;
+
+    // The first row with no name, so the pre-made checkbox rows get used instead of skipped.
+    const names = guests.getRange(1, cols["Name"] + 1, Math.max(guests.getLastRow(), 1), 1).getValues();
+    let target = names.length + 1;
+    for (let r = 2; r <= names.length; r++) {
+      if (!String(names[r - 1][0]).trim()) { target = r; break; }
+    }
+    guests.getRange(target, 1, 1, row.length).setValues([row]);
+    fillCodesAndLinks_(guests, target, 1);
+    return { ok: true, code: String(guests.getRange(target, cols["Code"] + 1).getValue()) };
   });
 }
 

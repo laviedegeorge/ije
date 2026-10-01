@@ -468,4 +468,13 @@ const canonicalHref = new URL("/schedule", Astro.url.origin).href;
       height: 1.05rem;
     }
   }
+
+  /* Plain page background behind the cards: skip the blur on phones, where it
+     costs a GPU pass every scroll frame without changing how they look. */
+  @media (max-width: 767px) {
+    .schedule-event-card {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+  }
 </style>
