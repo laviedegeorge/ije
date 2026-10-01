@@ -1,3 +1,4 @@
+import { invitationCard, inviteMessage, whatsAppHref } from "@/data/shareInvite";
 import { inviteLink, type InviteKind } from "@/util/inviteLinks";
 import { rsvpLink } from "@/util/rsvpLink";
 
@@ -72,14 +73,72 @@ const mountStatusButtons = (root: HTMLElement): void => {
 	}
 };
 
-const copyToClipboard = async (input: HTMLInputElement, status: HTMLElement): Promise<void> => {
-	try {
-		await navigator.clipboard.writeText(input.value);
-		status.textContent = "Link copied.";
-	} catch {
-		input.select();
-		status.textContent = "Couldn't copy. The link is selected; copy it manually.";
+/** Fills (or empties) a ShareButtons group for one personal link. */
+const fillShareButtons = (group: Element | null, message: string, link: string): void => {
+	if (!group) return;
+	const [copyMessage, copyLink] = group.querySelectorAll<HTMLButtonElement>("[data-copy-value]");
+	const whatsApp = group.querySelector<HTMLAnchorElement>("[data-whatsapp]");
+	const shareCard = group.querySelector<HTMLButtonElement>("[data-share-card]");
+	const empty = !message;
+	if (copyMessage) copyMessage.dataset.copyValue = message;
+	if (copyLink) copyLink.dataset.copyValue = link;
+	if (shareCard) shareCard.dataset.shareText = message;
+	for (const button of [copyMessage, copyLink, shareCard]) if (button) button.disabled = empty;
+	if (whatsApp) {
+		whatsApp.href = empty ? "#" : whatsAppHref(message);
+		if (empty) whatsApp.setAttribute("aria-disabled", "true");
+		else whatsApp.removeAttribute("aria-disabled");
 	}
+};
+
+/**
+ * The invitation card as a file, fetched up front: browsers only allow
+ * navigator.share straight after a tap, so it can't wait for a download then.
+ */
+let invitationFile: File | null = null;
+
+/** Copy and Share card buttons in every ShareButtons group (including inside the dialogs). */
+const mountShareButtons = (root: HTMLElement): void => {
+	root.addEventListener("click", async (e) => {
+		const copy = (e.target as Element).closest<HTMLButtonElement>("[data-copy-value]");
+		if (copy && !copy.disabled) {
+			const value = copy.dataset.copyValue ?? "";
+			const label = copy.textContent;
+			try {
+				await navigator.clipboard.writeText(value);
+				copy.textContent = "Copied";
+				window.setTimeout(() => (copy.textContent = label), 2000);
+			} catch {
+				window.prompt("Copy this:", value);
+			}
+			return;
+		}
+
+		const share = (e.target as Element).closest<HTMLButtonElement>("[data-share-card]");
+		if (share && !share.disabled && invitationFile) {
+			const text = share.dataset.shareText ?? "";
+			try {
+				await navigator.share({ files: [invitationFile], text });
+			} catch (err) {
+				// Closing the share sheet isn't an error; anything else falls back to WhatsApp text.
+				if ((err as DOMException)?.name !== "AbortError") window.open(whatsAppHref(text), "_blank", "noopener");
+			}
+		}
+	});
+
+	// Offer "Share card" only where pictures can be shared (mostly phones).
+	if (typeof navigator.canShare !== "function") return;
+	void fetch(invitationCard.src)
+		.then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
+		.then((blob) => {
+			const file = new File([blob], invitationCard.fileName, { type: blob.type || "image/jpeg" });
+			if (!navigator.canShare({ files: [file], text: "" })) return;
+			invitationFile = file;
+			for (const button of root.querySelectorAll<HTMLButtonElement>("[data-share-card]")) button.hidden = false;
+		})
+		.catch(() => {
+			// No card, no Share button: Copy and WhatsApp still work.
+		});
 };
 
 /** "RSVP link" dialog: type a name, copy or share the personal link. */
@@ -88,21 +147,15 @@ const mountRsvpLinkDialog = (root: HTMLElement): void => {
 	const form = dialog?.querySelector<HTMLFormElement>("[data-rsvp-link-form]");
 	const name = dialog?.querySelector<HTMLInputElement>("[data-rsvp-link-name]");
 	const output = dialog?.querySelector<HTMLInputElement>("[data-rsvp-link-output]");
-	const copy = dialog?.querySelector<HTMLButtonElement>("[data-copy-rsvp-link]");
-	const share = dialog?.querySelector<HTMLAnchorElement>("[data-share-rsvp-link]");
-	const status = dialog?.querySelector<HTMLElement>("[data-rsvp-link-status]");
+	const buttons = dialog?.querySelector("[data-share-buttons]") ?? null;
 	// Links point at whichever site the admin is open on (localhost, a preview, or live).
 	const siteUrl = window.location.origin;
-	if (!dialog || !form || !name || !output || !copy || !share || !status) return;
+	if (!dialog || !form || !name || !output) return;
 
 	const update = () => {
 		const hasName = name.value.trim() !== "";
 		output.value = hasName ? rsvpLink(siteUrl, name.value) : "";
-		copy.disabled = !hasName;
-		share.setAttribute("aria-disabled", String(!hasName));
-		share.tabIndex = hasName ? 0 : -1;
-		share.href = hasName ? `https://wa.me/?text=${encodeURIComponent(output.value)}` : "#";
-		status.textContent = "";
+		fillShareButtons(buttons, hasName ? inviteMessage("rsvp", name.value, output.value) : "", output.value);
 	};
 
 	root.querySelector("[data-open-rsvp-link]")?.addEventListener("click", () => {
@@ -114,11 +167,10 @@ const mountRsvpLinkDialog = (root: HTMLElement): void => {
 	name.addEventListener("input", update);
 	output.addEventListener("focus", () => output.select());
 
-	// Enter in the name field (or the button) copies the link.
-	form.addEventListener("submit", async (e) => {
+	// Enter in the name field copies the message.
+	form.addEventListener("submit", (e) => {
 		e.preventDefault();
-		if (!output.value) return;
-		await copyToClipboard(output, status);
+		buttons?.querySelector<HTMLButtonElement>("[data-copy-value]")?.click();
 	});
 
 	dialog.querySelector("[data-close-dialog]")?.addEventListener("click", () => dialog.close());
@@ -135,8 +187,7 @@ const mountInviteDialog = (root: HTMLElement): void => {
 	const error = dialog?.querySelector<HTMLElement>("[data-invite-error]");
 	const submit = dialog?.querySelector<HTMLButtonElement>("[data-invite-submit]");
 	const added = dialog?.querySelector<HTMLElement>("[data-invite-added]");
-	const status = dialog?.querySelector<HTMLElement>("[data-invite-status]");
-	if (!dialog || !form || !result || !error || !submit || !added || !status) return;
+	if (!dialog || !form || !result || !error || !submit || !added) return;
 
 	// After adding someone, reload on close so they appear on the Invitations tab.
 	let addedSomeone = false;
@@ -149,7 +200,6 @@ const mountInviteDialog = (root: HTMLElement): void => {
 		form.hidden = false;
 		result.hidden = true;
 		error.hidden = true;
-		status.textContent = "";
 	};
 
 	root.querySelector("[data-open-invite]")?.addEventListener("click", () => {
@@ -166,11 +216,8 @@ const mountInviteDialog = (root: HTMLElement): void => {
 		if (e.target === dialog) dialog.close();
 	});
 
-	for (const block of dialog.querySelectorAll<HTMLElement>("[data-invite-link]")) {
-		const output = block.querySelector<HTMLInputElement>("[data-link-output]");
-		if (!output) continue;
+	for (const output of dialog.querySelectorAll<HTMLInputElement>("[data-link-output]")) {
 		output.addEventListener("focus", () => output.select());
-		block.querySelector("[data-copy-link]")?.addEventListener("click", () => copyToClipboard(output, status));
 	}
 
 	form.addEventListener("submit", async (e) => {
@@ -214,9 +261,8 @@ const mountInviteDialog = (root: HTMLElement): void => {
 				if (block.hidden) continue;
 				const link = inviteLink(window.location.origin, kind, name, body.code);
 				const output = block.querySelector<HTMLInputElement>("[data-link-output]");
-				const share = block.querySelector<HTMLAnchorElement>("[data-share-link]");
 				if (output) output.value = link;
-				if (share) share.href = `https://wa.me/?text=${encodeURIComponent(link)}`;
+				fillShareButtons(block.querySelector("[data-share-buttons]"), inviteMessage(kind, name, link), link);
 			}
 			addedSomeone = true;
 			form.hidden = true;
@@ -231,23 +277,6 @@ const mountInviteDialog = (root: HTMLElement): void => {
 	});
 };
 
-/** Invitations tab: each "Copy link" button copies its data-copy-value. */
-const mountCopyButtons = (root: HTMLElement): void => {
-	for (const button of root.querySelectorAll<HTMLButtonElement>("[data-copy-value]")) {
-		button.addEventListener("click", async () => {
-			const label = button.textContent;
-			try {
-				await navigator.clipboard.writeText(button.dataset.copyValue ?? "");
-				button.textContent = "Copied";
-			} catch {
-				window.prompt("Copy this link:", button.dataset.copyValue ?? "");
-				return;
-			}
-			window.setTimeout(() => (button.textContent = label), 2000);
-		});
-	}
-};
-
 export const mountAdminDashboard = (): void => {
 	const root = document.querySelector<HTMLElement>("[data-admin-dashboard]");
 	if (!root) return;
@@ -255,5 +284,5 @@ export const mountAdminDashboard = (): void => {
 	mountStatusButtons(root);
 	mountRsvpLinkDialog(root);
 	mountInviteDialog(root);
-	mountCopyButtons(root);
+	mountShareButtons(root);
 };
