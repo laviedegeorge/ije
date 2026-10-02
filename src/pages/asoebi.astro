@@ -3,16 +3,19 @@ export const prerender = false;
 
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import InterestPage from "@/components/interest/InterestPage.astro";
-import { coupleNames } from "@/config/event";
+import { coupleNames, event } from "@/config/event";
 import { asoebiPageContent } from "@/data/interestPages";
 import { invitePreviewImage } from "@/data/shareInvite";
 import { siteTitleSuffix } from "@/data/site-nav";
 import { resolveInvitee } from "@/util/inviteList";
+import { findResponseByCode } from "@/util/interestSheet";
 
 // Personal links look like ?n=ada&c=K7Q2M9 — the code grants access, the name personalises.
 const linkName = Astro.url.searchParams.get("n")?.trim() ?? "";
 const linkCode = Astro.url.searchParams.get("c")?.trim() ?? "";
 const invitee = await resolveInvitee("asoebi", linkCode, linkName);
+// Already registered with this link? The page says so instead of offering the form again.
+const existing = invitee ? await findResponseByCode(event.sheets.asoebi, invitee.code) : null;
 
 const title = `Asoebi · ${siteTitleSuffix}`;
 const description = `Asoebi for ${coupleNames}'s Traditional Marriage and White Wedding.`;
@@ -29,6 +32,7 @@ const description = `Asoebi for ${coupleNames}'s Traditional Marriage and White 
 		content={asoebiPageContent}
 		endpoint="/api/asoebi"
 		invitee={invitee}
+		existing={existing}
 		idPrefix="asoebi"
 	/>
 </BaseLayout>

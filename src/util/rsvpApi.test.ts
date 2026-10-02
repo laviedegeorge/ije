@@ -6,9 +6,14 @@ import { POST } from "@/pages/api/rsvp";
 vi.mock("@/util/googleSheetsApi", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@/util/googleSheetsApi")>()),
 	appendRowsToSheet: vi.fn().mockResolvedValue({ ok: true }),
+	readSheetValues: vi.fn(),
 }));
 
-import { appendRowsToSheet } from "@/util/googleSheetsApi";
+import { appendRowsToSheet, readSheetValues } from "@/util/googleSheetsApi";
+import { RSVP_HEADERS } from "@/util/rsvpSheet";
+
+/** An RSVPs tab row with only the given columns filled. */
+const rsvpRow = (cells: Record<string, string>) => RSVP_HEADERS.map((h) => cells[h] ?? "");
 
 const validForm = (extra: Record<string, string> = {}): FormData => {
 	const f = new FormData();
@@ -32,7 +37,8 @@ const post = (form: FormData): Promise<Response> => {
 beforeEach(() => {
 	vi.stubEnv("APPS_SCRIPT_URL", "https://script.google.com/macros/s/fake/exec");
 	vi.stubEnv("APPS_SCRIPT_SECRET", "fake-secret");
-	vi.mocked(appendRowsToSheet).mockResolvedValue({ ok: true });
+	vi.mocked(appendRowsToSheet).mockClear().mockResolvedValue({ ok: true });
+	vi.mocked(readSheetValues).mockResolvedValue({ ok: true, values: [[...RSVP_HEADERS]] });
 });
 
 afterEach(() => {
@@ -77,6 +83,32 @@ describe("POST /api/rsvp", () => {
 			expect.any(Array),
 			expect.objectContaining({ headers: expect.any(Array) }),
 		);
+	});
+
+	it("refuses a second RSVP from the same phone number, however it's formatted", async () => {
+		vi.mocked(readSheetValues).mockResolvedValue({
+			ok: true,
+			values: [
+				[...RSVP_HEADERS],
+				rsvpRow({ "Submitted At": "2026-10-01T10:00:00Z", "Full Name": "Ada", "Guest Role": "Primary", Phone: "+234 803 123 4567" }),
+			],
+		});
+		const res = await post(validForm({ [RSVP_FIELD.phone]: "08031234567" }));
+		expect(res.status).toBe(409);
+		expect(await res.json()).toMatchObject({ ok: false, kind: "duplicate" });
+		expect(appendRowsToSheet).not.toHaveBeenCalled();
+	});
+
+	it("accepts a new phone number, and still saves when the RSVPs tab can't be read", async () => {
+		vi.mocked(readSheetValues).mockResolvedValue({
+			ok: true,
+			values: [[...RSVP_HEADERS], rsvpRow({ "Full Name": "Someone", "Guest Role": "Primary", Phone: "+2348099999999" })],
+		});
+		expect((await post(validForm({ [RSVP_FIELD.phone]: "+2348031234567" }))).status).toBe(200);
+
+		vi.mocked(readSheetValues).mockResolvedValue({ ok: false, reason: "upstream" });
+		expect((await post(validForm({ [RSVP_FIELD.phone]: "+2348031234567" }))).status).toBe(200);
+		expect(appendRowsToSheet).toHaveBeenCalledTimes(2);
 	});
 
 	it("returns 502 when the upstream sheet write fails", async () => {

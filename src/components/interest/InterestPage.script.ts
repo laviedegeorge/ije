@@ -69,6 +69,7 @@ const mountForm = (root: HTMLElement): void => {
 	const form = root.querySelector<HTMLFormElement>("[data-interest-form]");
 	const formView = root.querySelector<HTMLElement>("[data-form-view]");
 	const successView = root.querySelector<HTMLElement>("[data-success-view]");
+	const duplicateView = root.querySelector<HTMLElement>("[data-duplicate-view]");
 	const submit = root.querySelector<HTMLButtonElement>("[data-submit]");
 	const endpoint = root.dataset.endpoint;
 	if (!dialog || !form || !formView || !successView || !submit || !endpoint) return;
@@ -79,6 +80,7 @@ const mountForm = (root: HTMLElement): void => {
 	const resetViews = () => {
 		formView.hidden = false;
 		successView.hidden = true;
+		if (duplicateView) duplicateView.hidden = true;
 	};
 
 	for (const btn of root.querySelectorAll<HTMLButtonElement>("[data-open-form]")) {
@@ -139,6 +141,12 @@ const mountForm = (root: HTMLElement): void => {
 				formView.hidden = true;
 				successView.hidden = false;
 				successView.querySelector<HTMLElement>("h2")?.focus();
+				return;
+			}
+			if (response.status === 409 && body?.kind === "duplicate" && duplicateView) {
+				formView.hidden = true;
+				duplicateView.hidden = false;
+				duplicateView.querySelector<HTMLElement>("h2")?.focus();
 				return;
 			}
 			if (body?.kind === "validation" && body.fieldErrors) {

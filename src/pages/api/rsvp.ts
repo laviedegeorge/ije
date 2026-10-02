@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { event } from "@/config/event";
 import { normalizePhoneField } from "@/util/phoneNumber";
 import {
 	buildRsvpRecord,
@@ -8,7 +9,7 @@ import {
 	validateRsvpForm,
 } from "@/util/rsvpForm";
 import { isSheetsConfigured } from "@/util/googleSheetsApi";
-import { forwardRsvpToGoogleSheet } from "@/util/rsvpSheet";
+import { forwardRsvpToGoogleSheet, hasRsvpForPhone } from "@/util/rsvpSheet";
 import { rsvpMessage, sendTelegram } from "@/util/notify";
 
 export const prerender = false;
@@ -48,6 +49,18 @@ export const POST: APIRoute = async ({ request }) => {
 	}
 
 	const record = buildRsvpRecord(validation.values);
+
+	// One RSVP per phone number; changes go through the couple.
+	if (await hasRsvpForPhone(record.phone)) {
+		return json(
+			{
+				ok: false,
+				kind: "duplicate",
+				message: `We already have an RSVP for this number. To change anything, message us on WhatsApp: ${event.contactWhatsApp}.`,
+			},
+			409,
+		);
+	}
 	const forwarded = await forwardRsvpToGoogleSheet(record);
 
 	if (!forwarded.ok) {

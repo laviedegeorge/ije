@@ -248,6 +248,31 @@ describe("interest API", () => {
 		expect(appendRowsToSheet).toHaveBeenCalledWith(event.sheets.asoebi, expect.any(Array), expect.any(Object));
 	});
 
+	it("refuses a second registration from the same link without saving", async () => {
+		const groomsmenTab = [
+			[...RESPONSE_HEADERS],
+			["2026-09-29T10:00:00.000Z", "ADA111", "Ada Obi", "", "+2348031234567", "Both", "Confirmed"],
+		];
+		vi.mocked(readSheetValues).mockImplementation(async (sheet) =>
+			sheet === event.sheets.groomsmen ? { ok: true, values: groomsmenTab } : { ok: true, values: GUESTS },
+		);
+		const res = await call(postJoin, form({ c: "ADA111" }));
+		expect(res.status).toBe(409);
+		expect(await res.json()).toMatchObject({ ok: false, kind: "duplicate" });
+		expect(appendRowsToSheet).not.toHaveBeenCalled();
+
+		// The same guest can still register for the other list.
+		expect((await call(postAsoebi, form({ c: "ADA111" }))).status).toBe(200);
+	});
+
+	it("still saves when the responses tab can't be read", async () => {
+		vi.mocked(readSheetValues).mockImplementation(async (sheet) =>
+			sheet === event.sheets.guests ? { ok: true, values: GUESTS } : { ok: false, reason: "upstream" },
+		);
+		expect((await call(postJoin, form({ c: "ADA111" }))).status).toBe(200);
+		expect(appendRowsToSheet).toHaveBeenCalledTimes(1);
+	});
+
 	it("rejects codes that aren't ticked for the page", async () => {
 		// Chidi is ticked for Asoebi but not Groomsmen.
 		const res = await call(postJoin, form({ c: "CHI222" }));

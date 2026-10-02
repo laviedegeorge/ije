@@ -1,4 +1,4 @@
-import { appendRowsToSheet, type ResponseStatus } from "@/util/googleSheetsApi";
+import { appendRowsToSheet, readSheetValues, type ResponseStatus } from "@/util/googleSheetsApi";
 import { headerColumns } from "@/util/inviteList";
 import { INTEREST_EVENT_LABELS, type InterestValues } from "@/util/interestForm";
 import { sanitizeSheetCell } from "@/util/sheetCell";
@@ -77,4 +77,18 @@ export const parseResponseRows = (values: string[][]): InterestResponse[] => {
 		})
 		.filter((r) => r.submittedAt && r.code)
 		.reverse();
+};
+
+/**
+ * This guest's earlier response on an Asoebi / Groomsmen tab, if any. Returns
+ * null when there's none or the tab can't be read: a sheet problem shouldn't
+ * stop a guest registering.
+ */
+export const findResponseByCode = async (
+	sheetName: string,
+	code: string,
+): Promise<InterestResponse | null> => {
+	const result = await readSheetValues(sheetName);
+	if (!result.ok) return null;
+	return parseResponseRows(result.values).find((r) => r.code === code) ?? null;
 };

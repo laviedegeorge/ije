@@ -3,6 +3,8 @@ export const RSVP_SUBMIT_COPY = {
 	submitLabel: "Submit RSVP",
 	networkError: "We couldn’t reach the server. Check your connection and try again.",
 	serverError: "Something went wrong saving your RSVP. Please try again in a moment.",
+	/** Followed by a "Message us on WhatsApp" link in the form. */
+	duplicate: "We already have an RSVP for this phone number. To change anything,",
 	notConfigured:
 		"We couldn’t save your RSVP right now. Please try again in a little while, or contact us if it keeps happening.",
 } as const;
@@ -12,6 +14,7 @@ import { parseApiBody } from "@/util/apiResponse";
 export type RsvpClientSubmitResult =
 	| { ok: true }
 	| { ok: false; kind: "validation"; fieldErrors: Record<string, string> }
+	| { ok: false; kind: "duplicate"; message: string }
 	| { ok: false; kind: "network" | "server" | "not_configured"; message: string };
 
 /** POST form data to the site API (validates again server-side, then appends to Google Sheets). */
@@ -44,6 +47,10 @@ export const submitRsvpFormData = async (
 			);
 		}
 		return { ok: false, kind: "not_configured", message: RSVP_SUBMIT_COPY.notConfigured };
+	}
+
+	if (response.status === 409 && data?.kind === "duplicate") {
+		return { ok: false, kind: "duplicate", message: RSVP_SUBMIT_COPY.duplicate };
 	}
 
 	if (response.status === 400 && data?.kind === "validation" && data.fieldErrors) {

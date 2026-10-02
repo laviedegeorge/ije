@@ -1,6 +1,6 @@
 import type { CountryResidence, RsvpRecord } from "@/util/rsvpForm";
 import { event } from "@/config/event";
-import { appendRowsToSheet } from "@/util/googleSheetsApi";
+import { appendRowsToSheet, readSheetValues } from "@/util/googleSheetsApi";
 import { headerColumns } from "@/util/inviteList";
 import { sanitizeSheetCell } from "@/util/sheetCell";
 
@@ -215,4 +215,19 @@ export const parseRsvpRows = (values: string[][]): RsvpGuest[] => {
 		}))
 		.filter((g) => g.name)
 		.reverse();
+};
+
+const phoneDigits = (phone: string): string => phone.replace(/\D/g, "");
+
+/**
+ * True when someone has already RSVPed with this phone number (plus ones have
+ * no number, so they never match). False when the tab can't be read: a sheet
+ * problem shouldn't stop a guest RSVPing.
+ */
+export const hasRsvpForPhone = async (phone: string): Promise<boolean> => {
+	const digits = phoneDigits(phone);
+	if (!digits) return false;
+	const result = await readSheetValues(SHEET_NAME);
+	if (!result.ok) return false;
+	return parseRsvpRows(result.values).some((g) => !g.plusOneOf && phoneDigits(g.phone) === digits);
 };

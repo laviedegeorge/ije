@@ -1,5 +1,5 @@
 ---
-import { event } from "@/config/event";
+import { contactWhatsAppHref, event } from "@/config/event";
 import AddToCalendar from "@/components/calendar/AddToCalendar.astro";
 import ContentCard from "@/components/ContentCard.astro";
 import HeroPageSurface from "@/components/HeroPageSurface.astro";
@@ -351,7 +351,8 @@ const thankYouWriteChars = ["T", "h", "a", "n", "k", "\u00A0", "y", "o", "u"];
 					</span>
 				</p>
 				<p class="rsvp__success-copy">
-					Your RSVP is in — thank you! We can’t wait to celebrate with you. If anything changes, just let us know.
+					Your RSVP is in — thank you! We can’t wait to celebrate with you. Need to change something?
+					<a href={contactWhatsAppHref} target="_blank" rel="noopener noreferrer">Message us on WhatsApp</a>.
 				</p>
 				<AddToCalendar />
 			</div>
@@ -588,6 +589,22 @@ const thankYouWriteChars = ["T", "h", "a", "n", "k", "\u00A0", "y", "o", "u"];
 		border: 1px solid rgb(181 74 58 / 0.35);
 		background: rgb(181 74 58 / 0.07);
 		font-weight: 600;
+	}
+
+	/* "Already RSVPed": information, not an error. */
+	.rsvp__summary--notice,
+	.rsvp__summary--notice:not([hidden]) {
+		color: #4a3d32;
+		border-color: rgb(201 168 124 / 0.6);
+		background: rgb(201 168 124 / 0.16);
+	}
+
+	.rsvp__summary a,
+	.rsvp__success-copy a {
+		color: #6e523c;
+		font-weight: 700;
+		text-decoration: underline;
+		text-underline-offset: 0.14em;
 	}
 
 	.rsvp__summary[hidden] {

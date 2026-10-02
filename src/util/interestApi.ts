@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { event } from "@/config/event";
 import { isSheetsConfigured } from "@/util/googleSheetsApi";
 import { resolveInvitee, type InviteListKind } from "@/util/inviteList";
 import {
@@ -8,7 +9,7 @@ import {
 	validateInterestForm,
 } from "@/util/interestForm";
 import { normalizePhoneField } from "@/util/phoneNumber";
-import { forwardInterestToGoogleSheet } from "@/util/interestSheet";
+import { findResponseByCode, forwardInterestToGoogleSheet } from "@/util/interestSheet";
 import { interestMessage, sendTelegram } from "@/util/notify";
 
 const json = (body: unknown, status = 200): Response =>
@@ -58,6 +59,18 @@ export const createInterestHandler =
 			const fieldErrors = validation.ok ? {} : validation.fieldErrors;
 			if (phoneError) fieldErrors[INTEREST_FIELD.whatsapp] = phoneError;
 			return json({ ok: false, kind: "validation", fieldErrors }, 400);
+		}
+
+		// One registration per personal link; changes go through the couple.
+		if (await findResponseByCode(opts.sheetName, invitee.code)) {
+			return json(
+				{
+					ok: false,
+					kind: "duplicate",
+					message: `You've already registered your interest. To change anything, message us on WhatsApp: ${event.contactWhatsApp}.`,
+				},
+				409,
+			);
 		}
 
 		const forwarded = await forwardInterestToGoogleSheet(opts.sheetName, invitee.code, validation.values);
