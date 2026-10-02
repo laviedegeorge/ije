@@ -48,6 +48,12 @@ export const event = {
     label: "November 30, 2026",
   },
 
+  /**
+   * WhatsApp number guests message to change an RSVP or registration (the site
+   * doesn't let them submit twice). International format.
+   */
+  contactWhatsApp: "+2348062242901",
+
   /** Last day to register on the Asoebi and Groomsmen pages (shown on both). */
   interestDeadline: {
     iso: "2026-10-31",
@@ -123,6 +129,9 @@ export const coupleNames = `${event.partnerOne.firstName} & ${event.partnerTwo.f
 
 /** "Cynthia Ibekwe and Kelechi Apugo" */
 export const coupleFullNames = `${event.partnerOne.fullName} and ${event.partnerTwo.fullName}`;
+
+/** Opens a WhatsApp chat with the couple's contact number. */
+export const contactWhatsAppHref = `https://wa.me/${event.contactWhatsApp.replace(/\D/g, "")}`;
 
 /** "C & K" */
 export const coupleInitials = `${event.partnerOne.firstName[0]} & ${event.partnerTwo.firstName[0]}`;

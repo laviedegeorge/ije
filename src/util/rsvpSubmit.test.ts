@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RSVP_FIELD } from "./rsvpForm";
-import { submitRsvpFormData } from "./rsvpSubmit";
+import { RSVP_SUBMIT_COPY, submitRsvpFormData } from "./rsvpSubmit";
 
 const sampleFormData = (): FormData => {
 	const fd = new FormData();
@@ -28,6 +28,22 @@ describe("submitRsvpFormData", () => {
 
 		const result = await submitRsvpFormData(sampleFormData());
 		expect(result).toEqual({ ok: true });
+	});
+
+	it("reports an RSVP already made with this number", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValue({
+				ok: false,
+				status: 409,
+				json: async () => ({ ok: false, kind: "duplicate", message: "server text" }),
+			}),
+		);
+		expect(await submitRsvpFormData(sampleFormData())).toEqual({
+			ok: false,
+			kind: "duplicate",
+			message: RSVP_SUBMIT_COPY.duplicate,
+		});
 	});
 
 	it("returns validation errors from API", async () => {

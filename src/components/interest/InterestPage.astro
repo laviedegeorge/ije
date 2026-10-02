@@ -9,10 +9,11 @@ import HeroPageSurface from "@/components/HeroPageSurface.astro";
 import FormChoice from "@/components/forms/FormChoice.astro";
 import FormChoiceGroup from "@/components/forms/FormChoiceGroup.astro";
 import FormField from "@/components/forms/FormField.astro";
-import { coupleNames, event } from "@/config/event";
+import { contactWhatsAppHref, coupleNames, event } from "@/config/event";
 import type { InterestPageContent } from "@/data/interestPages";
 import { weeklyReminder } from "@/util/calendar";
 import type { Invitee } from "@/util/inviteList";
+import type { InterestResponse } from "@/util/interestSheet";
 import {
 	INTEREST_EVENT_LABELS,
 	INTEREST_FIELD,
@@ -27,9 +28,15 @@ interface Props {
 	invitee: Invitee | null;
 	/** Prefix for element ids, so ids stay unique and readable. */
 	idPrefix: string;
+	/** Their earlier registration with this link; the form isn't offered again. */
+	existing?: InterestResponse | null;
 }
 
-const { content, endpoint, invitee, idPrefix } = Astro.props;
+const { content, endpoint, invitee, idPrefix, existing } = Astro.props;
+const registeredOn = existing
+	? new Date(existing.submittedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "Africa/Lagos" })
+	: "";
+const registeredFor = existing?.events === "Both" ? "both celebrations" : existing?.events;
 const firstName = invitee?.name.split(" ")[0] ?? "";
 const id = (suffix: string) => `${idPrefix}-${suffix}`;
 
@@ -62,6 +69,12 @@ const reminder = reminderEvent && { event: reminderEvent, label: `${content.eyeb
 						Deadline for registration and commitment:
 						<time datetime={event.interestDeadline.iso}>{event.interestDeadline.label}</time>
 					</p>
+					{existing && (
+						<p class="interest__registered" role="status">
+							You've already registered your interest ({registeredFor}, {registeredOn}). Need to change
+							something? <a href={contactWhatsAppHref} target="_blank" rel="noopener noreferrer">Message us on WhatsApp</a>.
+						</p>
+					)}
 				</header>
 
 				<ContentCard variant="secondary" class="interest__card" data-reveal data-delay="1">
@@ -107,9 +120,11 @@ const reminder = reminderEvent && { event: reminderEvent, label: `${content.eyeb
 									<ul class="interest__guidance">
 										{tab.guidance.map((line) => <li>{line}</li>)}
 									</ul>
-									<button type="button" class="interest__cta" data-open-form={tab.id}>
-										{content.buttonLabel}
-									</button>
+									{!existing && (
+										<button type="button" class="interest__cta" data-open-form={tab.id}>
+											{content.buttonLabel}
+										</button>
+									)}
 								</div>
 							</div>
 						</section>
@@ -182,7 +197,20 @@ const reminder = reminderEvent && { event: reminderEvent, label: `${content.eyeb
 					<div class="interest__dialog-body interest__success" data-success-view hidden>
 						<h2 class="interest__success-title" tabindex="-1">{content.successTitle}</h2>
 						<p class="interest__success-copy">{content.successMessage}</p>
+						<p class="interest__success-copy">
+							Need to change something?
+							<a href={contactWhatsAppHref} target="_blank" rel="noopener noreferrer">Message us on WhatsApp</a>.
+						</p>
 						<AddToCalendar reminder={reminder} />
+						<button type="button" class="interest__cta" data-close-form>Done</button>
+					</div>
+
+					<div class="interest__dialog-body interest__success" data-duplicate-view hidden>
+						<h2 class="interest__success-title" tabindex="-1">Already registered</h2>
+						<p class="interest__success-copy">
+							You've already registered your interest with this link. Need to change something?
+							<a href={contactWhatsAppHref} target="_blank" rel="noopener noreferrer">Message us on WhatsApp</a>.
+						</p>
 						<button type="button" class="interest__cta" data-close-form>Done</button>
 					</div>
 				</dialog>
@@ -480,6 +508,29 @@ const reminder = reminderEvent && { event: reminderEvent, label: `${content.eyeb
 		font-size: 2rem;
 		font-weight: 400;
 		outline: none;
+	}
+
+	.interest__registered {
+		max-width: 34rem;
+		margin: 1rem auto 0;
+		padding: 0.75rem 1rem;
+		border-radius: 0.85rem;
+		border: 1px solid rgb(201 168 124 / 0.6);
+		background: rgb(255 252 247 / 0.75);
+		line-height: 1.55;
+		color: var(--text-primary);
+	}
+
+	.interest__registered a,
+	.interest__success-copy a {
+		color: #6e523c;
+		font-weight: 700;
+		text-decoration: underline;
+		text-underline-offset: 0.14em;
+	}
+
+	.interest__success-copy + .interest__success-copy {
+		margin-top: 0.6rem;
 	}
 
 	.interest__success-copy {

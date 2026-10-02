@@ -8,6 +8,7 @@ import {
 } from "@/util/rsvpForm";
 import { showChosenCelebrations, type Celebration } from "@/components/calendar/addToCalendar";
 import { mountPhoneInput } from "@/components/forms/phoneInput";
+import { contactWhatsAppHref } from "@/config/event";
 import { RSVP_SUBMIT_COPY, submitRsvpFormData } from "@/util/rsvpSubmit";
 
 const ERROR_IDS = [
@@ -104,6 +105,7 @@ const clearErrors = (form: HTMLFormElement): void => {
 	if (summary instanceof HTMLElement) {
 		summary.hidden = true;
 		summary.textContent = "";
+		summary.classList.remove("rsvp__summary--notice");
 	}
 
 	for (const id of ERROR_IDS) {
@@ -170,6 +172,21 @@ const showSubmitError = (form: HTMLFormElement, message: string): void => {
 	if (!(summary instanceof HTMLElement)) return;
 	summary.hidden = false;
 	summary.textContent = message;
+	scrollFieldIntoView(summary);
+};
+
+/** "Already RSVPed" notice, with a link to message the couple on WhatsApp. */
+const showDuplicateNotice = (form: HTMLFormElement, message: string): void => {
+	const summary = form.querySelector("#rsvp-form-summary");
+	if (!(summary instanceof HTMLElement)) return;
+	const link = document.createElement("a");
+	link.href = contactWhatsAppHref;
+	link.target = "_blank";
+	link.rel = "noopener noreferrer";
+	link.textContent = "message us on WhatsApp";
+	summary.replaceChildren(`${message} `, link, ".");
+	summary.classList.add("rsvp__summary--notice");
+	summary.hidden = false;
 	scrollFieldIntoView(summary);
 };
 
@@ -293,6 +310,10 @@ export const mountRsvpForm = (): void => {
 			if (saved.kind === "validation") {
 				showErrors(form, saved.fieldErrors);
 				focusFirstInvalid(form, saved.fieldErrors);
+				return;
+			}
+			if (saved.kind === "duplicate") {
+				showDuplicateNotice(form, saved.message);
 				return;
 			}
 			showSubmitError(form, saved.message);
