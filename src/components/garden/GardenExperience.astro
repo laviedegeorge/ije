@@ -1,0 +1,152 @@
+---
+/**
+ * A 3D garden invitation, ported from Wedoo's Garden Experience template. The guest breaks the
+ * wax seal on an envelope, then explores the chapters as places in a candlelit garden. The markup
+ * is rendered here; garden.script.ts builds the three.js scene and drives the chapters.
+ */
+import "./garden.css";
+import Envelope from "./Envelope.astro";
+import { CHAPTERS, replyHref, type GardenContent } from "./content";
+
+interface Props {
+  content: GardenContent;
+}
+
+const { content } = Astro.props;
+const coupleNames = `${content.names[0]} & ${content.names[1]}`;
+const celebrations = new Set(content.gathering.items.map((item) => item.day)).size;
+const reply = replyHref(content.ask);
+---
+
+<div class="garden" data-garden data-content={JSON.stringify(content)}>
+  <div class="fallback" hidden data-fallback></div>
+  <canvas class="world" aria-hidden="true" data-world></canvas>
+  <div class="loading" data-loading>Setting the scene</div>
+
+  <div class="opening closed" data-opening>
+    <Envelope initials={content.sealInitials} from={content.from} guestName={content.guestName} />
+  </div>
+
+  <div class="spots" aria-label="Places in the garden" data-spots>
+    {CHAPTERS.filter((c) => c.id !== "welcome").map((c) => (
+      <button type="button" class="spot" data-spot={c.id} data-go={c.id}>
+        <i />
+        <span>{c.label}</span>
+      </button>
+    ))}
+  </div>
+
+  <div class="app" data-app>
+    <header class="top">
+      <span class="monogram">{coupleNames}</span>
+      <nav class="chapters" aria-label="Chapters">
+        {CHAPTERS.map((c, n) => (
+          <button type="button" aria-current={String(n === 0)} data-go={c.id}>{c.label}</button>
+        ))}
+      </nav>
+      <button class="rsvp-cta" type="button" data-go="ask">Answer</button>
+    </header>
+    <main class="stage" data-side="right" data-stage>
+      <article class="panel enter anchored" tabindex="-1" aria-live="polite" data-panel></article>
+    </main>
+    <footer class="bottom">
+      <button class="step ghost" type="button" data-step="-1">
+        <span aria-hidden="true">←</span>
+        <span class="lbl"></span>
+      </button>
+      <div class="dots" aria-hidden="true">
+        {CHAPTERS.map((_, n) => <i class={n === 0 ? "on" : undefined} />)}
+      </div>
+      <button class="step" type="button" data-step="1">
+        <span class="lbl"></span>
+        <span aria-hidden="true">→</span>
+      </button>
+    </footer>
+  </div>
+  <div class="toggles" role="group" aria-label="Time of day" data-toggles>
+    <button type="button" aria-pressed="true" data-time="golden">Golden hour</button>
+    <button type="button" aria-pressed="false" data-time="evening">Evening</button>
+  </div>
+
+  <div class="lightbox" role="dialog" aria-modal="true" hidden data-lightbox>
+    <figure>
+      <img alt="" hidden data-lightbox-img />
+      <video controls playsinline preload="none" hidden data-lightbox-video></video>
+      <figcaption data-lightbox-caption></figcaption>
+    </figure>
+    <button type="button" aria-label="Close" data-lightbox-close>×</button>
+  </div>
+
+  <template data-chapter="welcome">
+    <p class="eyebrow">{content.welcome.eyebrow}</p>
+    <h1><em>Dear</em> {content.guestName}</h1>
+    <hr class="rule" />
+    <p class="when">{content.dateLabel} · {content.city}</p>
+    <div class="count">
+      <div><b data-days>–</b><span>Days to go</span></div>
+      <div><b>{celebrations}</b><span>Celebrations</span></div>
+    </div>
+    <p class="note">{content.welcome.note}</p>
+  </template>
+
+  <template data-chapter="story">
+    <p class="eyebrow">{content.story.eyebrow}</p>
+    <h2>{content.story.headline}</h2>
+    {content.story.paragraphs.map((p) => <p>{p}</p>)}
+  </template>
+
+  <template data-chapter="memories">
+    <p class="eyebrow">{content.memories.eyebrow}</p>
+    <h2>{content.memories.headline}</h2>
+    <p>{content.memories.intro}</p>
+    <div class="thumbs">
+      {content.gallery.map((photo, i) => (
+        <button type="button" data-photo={i} aria-label={photo.video ? `Play video: ${photo.caption}` : undefined}>
+          <img src={photo.thumb ?? photo.src} alt={photo.caption} loading="lazy" />
+          {photo.video ? <i class="play" aria-hidden="true" /> : null}
+          <span>{photo.caption}</span>
+        </button>
+      ))}
+    </div>
+  </template>
+
+  <template data-chapter="days">
+    <p class="eyebrow">{content.gathering.eyebrow}</p>
+    <h2>{content.gathering.headline}</h2>
+    <div class="list">
+      {content.gathering.items.map((item) => (
+        <div class="item">
+          <time>{item.day}<br />{item.time}</time>
+          <div><h3>{item.name}</h3><p>{item.details}</p></div>
+        </div>
+      ))}
+    </div>
+    <a class="linkish" href="/schedule">See the full schedule</a>
+  </template>
+
+  <template data-chapter="ask">
+    <p class="eyebrow">{content.ask.eyebrow}</p>
+    <h2>{content.guestName}, {content.ask.question}</h2>
+    {content.ask.paragraphs.map((p) => <p>{p}</p>)}
+    <div data-ask-open>
+      <div class="actions">
+        <a class="primary" href={reply} target="_blank" rel="noopener noreferrer" data-yes>{content.ask.yesLabel}</a>
+        <button class="secondary" type="button" data-wait>{content.ask.waitLabel}</button>
+      </div>
+      <p hidden data-wait-msg>{content.ask.waitMessage}</p>
+      <p class="note">This opens WhatsApp with a reply to {content.from} you can edit before sending.</p>
+    </div>
+    <div class="done" role="status" hidden data-ask-done>
+      <h3>{content.ask.doneTitle}</h3>
+      <p>{content.ask.doneMessage}</p>
+      <a class="linkish" href={reply} target="_blank" rel="noopener noreferrer">Open WhatsApp again</a>
+    </div>
+  </template>
+</div>
+
+<script>
+  import { mountGarden } from "./garden.script";
+
+  const root = document.querySelector<HTMLElement>("[data-garden]");
+  if (root) mountGarden(root);
+</script>
