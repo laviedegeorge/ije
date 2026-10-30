@@ -41,7 +41,7 @@ const reply = replyHref(content.ask);
       <span class="monogram">{coupleNames}</span>
       <nav class="chapters" aria-label="Chapters">
         {CHAPTERS.map((c, n) => (
-          <button type="button" aria-current={String(n === 0)} data-go={c.id}>{c.label}</button>
+          <button type="button" aria-current={n === 0 ? "true" : "false"} data-go={c.id}>{c.label}</button>
         ))}
       </nav>
       <button class="rsvp-cta" type="button" data-go="ask">Answer</button>
