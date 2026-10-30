@@ -79,7 +79,7 @@
 .garden .app .stage { pointer-events: none; }
 .garden .app.ready .panel { pointer-events: auto; }
 .garden .top { display: flex; align-items: center; gap: 18px; padding-block: 16px; min-width: 0; }
-.garden .monogram { flex: none; font: italic 400 22px/1 var(--display); color: #fff; text-shadow: 0 1px 12px rgb(0 0 0 / .45); white-space: nowrap; }
+.garden .monogram { flex: none; display: block; width: auto; height: 40px; filter: drop-shadow(0 1px 8px rgb(0 0 0 / .45)); }
 .garden .chapters { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; min-width: 0; margin-inline: auto; padding: 4px; border-radius: 999px; background: var(--chip); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .garden .chapters::-webkit-scrollbar { display: none; }
 .garden .chapters button { flex: none; border: 0; background: none; color: rgb(255 255 255 / .84); padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background .3s, color .3s; }

@@ -1,7 +1,7 @@
 ---
 /**
  * A 3D garden invitation, ported from Wedoo's Garden Experience template. The guest breaks the
- * wax seal on an envelope, then explores the chapters as places in a candlelit garden. The markup
+ * wax seal on an envelope, then explores the chapters as places in a string-lit garden ceremony. The markup
  * is rendered here; garden.script.ts builds the three.js scene and drives the chapters.
  */
 import "./garden.css";
@@ -38,10 +38,10 @@ const reply = replyHref(content.ask);
 
   <div class="app" data-app>
     <header class="top">
-      <span class="monogram">{coupleNames}</span>
+      <img class="monogram" src="/assets/monogram-white.webp" alt={coupleNames} width="263" height="240" decoding="async" />
       <nav class="chapters" aria-label="Chapters">
         {CHAPTERS.map((c, n) => (
-          <button type="button" aria-current={String(n === 0)} data-go={c.id}>{c.label}</button>
+          <button type="button" aria-current={n === 0 ? "true" : "false"} data-go={c.id}>{c.label}</button>
         ))}
       </nav>
       <button class="rsvp-cta" type="button" data-go="ask">Answer</button>

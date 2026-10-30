@@ -1,4 +1,5 @@
-// The Garden Experience courtyard (from Wedoo's template): a golden-hour garden built in three.js.
+// A golden-hour garden ceremony built in three.js (adapted from Wedoo's Garden Experience
+// template): rows of chairs down an aisle runner, string lights overhead and a floral arbour.
 // Each chapter of the invitation is a place in the garden (an easel, a photo wall, a board, a
 // table) and a camera shot. garden.script.ts drives it through the handle returned by createGardenScene.
 import * as THREE from "three";
@@ -26,12 +27,14 @@ export const PLACES: Record<
   story: { desk: [[-1.3, 1.7, 6.4], [-4, 1.4, 3.6]], phone: [[-1, 1.9, 7.4], [-4, 1.4, 3.6]], side: "right", anchor: [-4, 2.25, 3.6] },
   memories: { desk: [[-1.4, 1.7, 2.2], [-5.2, 1.65, -0.6]], phone: [[-0.6, 1.8, 3.2], [-5.2, 1.65, -0.6]], side: "right", anchor: [-4.85, 2.45, -0.6] },
   days: { desk: [[0.3, 1.7, 0.2], [3.95, 1.3, -0.7]], phone: [[0.66, 1.45, 1.19], [3.95, 1.34, -0.7]], side: "left", anchor: [3.95, 2.25, -0.7] },
-  ask: { desk: [[1.7, 1.55, 5.3], [3.45, 1, 4.35]], phone: [[1.99, 1.2, 5.4], [3.45, 1, 4.35]], side: "left", anchor: [3.5, 1.15, 4.3] },
+  // Shot from just outside the last chair on the right, so no chair back crowds the lens.
+  ask: { desk: [[2.45, 1.6, 6.1], [3.45, 1, 4.35]], phone: [[2.55, 1.35, 6.0], [3.45, 1, 4.35]], side: "left", anchor: [3.5, 1.15, 4.3] },
 };
 const INTRO: Shot = [[0, 3.4, 19.5], [0, 2.4, -7.5]];
-/** Centre of the rose arch; the Welcome panel sits inside it. */
+/** Centre of the floral arbour; the Welcome panel sits inside it. */
 const GATE = new THREE.Vector3(0, 3.5, -7.6);
-const RING = 3.35;
+/** The arbour's pillars stand this far either side of the aisle; its beam sits at ARBOUR_TOP. */
+const ARBOUR_HALF = 2.6, ARBOUR_TOP = 6.7;
 
 export type GardenScene = {
   /** Fly the camera to a chapter's shot. */
@@ -238,6 +241,18 @@ export function createGardenScene(
       g.fill();
     }
   }, [4, 1]);
+  // The aisle runner: ivory linen with burgundy borders and a fine gold line.
+  const runnerTex = canvasTex(128, 1024, (g, w, h) => {
+    g.fillStyle = "#ddd0bb";
+    g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 1400; i++) { g.fillStyle = `rgba(150,120,90,${rand() * 0.06})`; g.fillRect(rand() * w, rand() * h, 1 + rand() * 3, 1); }
+    g.fillStyle = "#6d1f2f";
+    g.fillRect(6, 0, 9, h);
+    g.fillRect(w - 15, 0, 9, h);
+    g.fillStyle = "#deba7e";
+    g.fillRect(20, 0, 2, h);
+    g.fillRect(w - 22, 0, 2, h);
+  }, [1, 4]);
   // A printed photo: the image cover-cropped around focusX, with a caption over a soft shade.
   // A video shows its poster frame with a play mark.
   function photoTex({ src, caption, video, focusX = 0.5 }: GardenPhoto) {
@@ -263,8 +278,12 @@ export function createGardenScene(
         g.beginPath(); g.moveTo(cx - r * 0.3, cy - r * 0.45); g.lineTo(cx + r * 0.5, cy); g.lineTo(cx - r * 0.3, cy + r * 0.45); g.fill();
       }
       g.fillStyle = "rgba(255,255,255,0.94)";
+      // Long captions shrink to stay inside the frame.
+      const pad = 56 * (w / 1024);
       g.font = display(60 * (w / 1024), "italic");
-      g.fillText(caption, 56 * (w / 1024), h - 64 * (w / 1024));
+      const fit = Math.min(1, (w - pad * 2) / g.measureText(caption).width);
+      g.font = display(60 * (w / 1024) * fit, "italic");
+      g.fillText(caption, pad, h - 64 * (w / 1024));
     };
     const tex = canvasTex(w, h, draw);
     const redraw = () => {
@@ -328,12 +347,12 @@ export function createGardenScene(
     hedge: new T.MeshStandardMaterial({ map: leafTex, bumpMap: leafTex, bumpScale: 0.05, roughness: 0.95 }),
     cypress: new T.MeshStandardMaterial({ color: col("#9fb38c"), map: leafTex, bumpMap: leafTex, bumpScale: 0.04, roughness: 1 }),
     grass: new T.MeshStandardMaterial({ color: col("#4f6339"), roughness: 1 }),
-    water: new T.MeshStandardMaterial({ color: col("#1f3b40"), metalness: 0.9, roughness: 0.06, envMapIntensity: 1.2 }),
+    runner: new T.MeshStandardMaterial({ map: runnerTex, roughness: 0.92 }),
+    chairWood: new T.MeshStandardMaterial({ color: col("#7a5233"), roughness: 0.62 }),
+    cushion: new T.MeshStandardMaterial({ color: col("#efe6d6"), roughness: 0.95 }),
     gold: new T.MeshStandardMaterial({ color: col("#caa25a"), metalness: 1, roughness: 0.28 }),
     iron: new T.MeshStandardMaterial({ color: col("#2b2622"), metalness: 0.7, roughness: 0.45 }),
-    glass: new T.MeshStandardMaterial({ color: col("#ffffff"), roughness: 0.05, metalness: 0, transparent: true, opacity: 0.18 }),
-    wax: new T.MeshStandardMaterial({ color: col("#f3ead8"), roughness: 0.6 }),
-    flame: new T.MeshBasicMaterial({ color: new T.Color(4, 2.2, 0.8), toneMapped: false }),
+    bulb: new T.MeshBasicMaterial({ color: new T.Color(3.2, 2.2, 1.1), toneMapped: false }),
     linen: new T.MeshStandardMaterial({ color: col("#cfc6b8"), roughness: 0.95 }),
     wood: new T.MeshStandardMaterial({ color: col("#6b4a33"), roughness: 0.7 }),
     leaf: new T.MeshStandardMaterial({ color: col("#3c5a3a"), roughness: 0.8, side: T.DoubleSide }),
@@ -365,15 +384,11 @@ export function createGardenScene(
     return m;
   };
 
-  // --- ground, terrace, pool ---
+  // --- ground, terrace, the dais under the arbour and the aisle runner ---
   mesh(new T.PlaneGeometry(200, 200), M.grass, [0, -0.02, 0], { rot: [-Math.PI / 2, 0, 0], cast: false });
   mesh(new T.PlaneGeometry(12, 22), M.stone, [0, 0, 1.5], { rot: [-Math.PI / 2, 0, 0], cast: false });
-  // Phones get a still pool: rippling it meant recomputing normals on the CPU every other frame.
-  const waterGeo = new T.PlaneGeometry(3, 14, phone ? 1 : 24, phone ? 1 : 110);
-  mesh(waterGeo, M.water, [0, 0.05, 1.5], { rot: [-Math.PI / 2, 0, 0], cast: false });
-  const waterBase = (waterGeo.attributes.position.array as Float32Array).slice();
-  ([[0, 0.09, -5.65, 3.6, 0.14, 0.3], [0, 0.09, 8.65, 3.6, 0.14, 0.3], [-1.65, 0.09, 1.5, 0.3, 0.14, 14.6], [1.65, 0.09, 1.5, 0.3, 0.14, 14.6]] as const)
-    .forEach(([x, y, z, w, h, d]) => mesh(new T.BoxGeometry(w, h, d), M.plinth, [x, y, z]));
+  mesh(new T.BoxGeometry(6.2, 0.12, 1.8), M.plinth, [0, 0.06, GATE.z + 0.1]);
+  mesh(new T.PlaneGeometry(1.1, 15.2), M.runner, [0, 0.008, 1.0], { rot: [-Math.PI / 2, 0, 0], cast: false });
 
   // --- hedges and cypress ---
   [-5.4, 5.4].forEach((x) => mesh(new T.BoxGeometry(0.9, 2.4, 20), M.hedge, [x, 1.2, 1.5]));
@@ -387,7 +402,9 @@ export function createGardenScene(
   }
   [-4.2, -2.6, 2.6, 4.2].forEach((x) => mesh(cypressGeo, M.cypress, [x, 0, -10.3], { scale: [1.1, 1.55, 1.1] }));
 
-  // --- moon-gate of roses ---
+  // --- the floral arbour: square pillars and a beam, flowers cascading from one corner ---
+  [-1, 1].forEach((side) => mesh(new T.BoxGeometry(0.32, ARBOUR_TOP, 0.32), M.plinth, [side * ARBOUR_HALF, ARBOUR_TOP / 2 + 0.12, GATE.z]));
+  mesh(new T.BoxGeometry(ARBOUR_HALF * 2 + 0.7, 0.3, 0.4), M.plinth, [0, ARBOUR_TOP + 0.12, GATE.z]);
   const ROSE_N = lite ? 320 : phone ? 560 : 1050;
   const cupGeo = new T.LatheGeometry([[0.0, 0], [0.05, 0.004], [0.085, 0.03], [0.1, 0.065], [0.095, 0.095]].map(([x, y]) => new T.Vector2(x, y)), 12);
   cupGeo.rotateX(Math.PI / 2);
@@ -410,17 +427,26 @@ export function createGardenScene(
   const dummy = new T.Object3D(), tint = new T.Color();
   for (let i = 0; i < ROSE_N; i++) {
     let x: number, y: number, z: number;
-    if (i < ROSE_N * 0.86) {
-      const a = ((-58 + rand() * 296) * Math.PI) / 180, dr = (rand() - 0.5) * 0.62, dz = (rand() - 0.5) * 0.5;
-      x = GATE.x + Math.cos(a) * (RING + dr);
-      y = GATE.y + Math.sin(a) * (RING + dr);
-      z = GATE.z + dz;
+    const top = ARBOUR_TOP + 0.12;
+    if (i < ROSE_N * 0.62) {
+      // The main cascade: thick at the top-left corner, thinning along the beam and down the pillar.
+      const t = Math.pow(rand(), 1.7) * 4.4;
+      if (rand() < 0.55) { x = -ARBOUR_HALF + t; y = top; } else { x = -ARBOUR_HALF; y = top - t * 0.85; }
+      x += (rand() - 0.5) * 0.7;
+      y += (rand() - 0.5) * 0.6;
+      z = GATE.z + 0.1 + (rand() - 0.5) * 0.6;
+    } else if (i < ROSE_N * 0.86) {
+      // A smaller answering cluster climbing the right pillar.
+      const t = Math.pow(rand(), 1.4) * 2.4;
+      x = ARBOUR_HALF + (rand() - 0.5) * 0.6;
+      y = 0.35 + t + (rand() - 0.5) * 0.4;
+      z = GATE.z + 0.1 + (rand() - 0.5) * 0.6;
     } else {
-      // spill of blooms at the base of both sides
-      const side = rand() < 0.5 ? -1 : 1;
-      x = side * (1.75 + rand() * 1.2);
-      y = 0.15 + rand() * 0.55;
-      z = GATE.z + 0.2 + rand() * 0.7;
+      // blooms spilling onto the dais at the foot of both pillars
+      const side = rand() < 0.3 ? -1 : 1;
+      x = side * (ARBOUR_HALF - 0.6 + rand() * 1.3);
+      y = 0.2 + rand() * 0.45;
+      z = GATE.z + 0.3 + rand() * 0.6;
     }
     const s = 0.75 + rand() * 0.55;
     dummy.position.set(x, y, z);
@@ -438,29 +464,98 @@ export function createGardenScene(
     dummy.updateMatrix();
     leaves.setMatrixAt(i, dummy.matrix);
   }
-  [-1, 1].forEach((side) => mesh(new T.BoxGeometry(0.7, 0.5, 0.9), M.plinth, [side * 1.8, 0.25, GATE.z]));
 
-  // --- lanterns along the pool ---
-  const flames: THREE.Mesh[] = [];
-  const postGeo = new T.BoxGeometry(0.025, 0.42, 0.025), capGeo = new T.ConeGeometry(0.2, 0.14, 4), pedGeo = new T.BoxGeometry(0.42, 0.85, 0.42);
-  const candleGeo = new T.CylinderGeometry(0.045, 0.045, 0.16, 16), flameGeo = new T.SphereGeometry(0.022, 10, 8);
-  flameGeo.scale(1, 2.2, 1);
-  const glassGeo = new T.BoxGeometry(0.26, 0.4, 0.26);
-  function lantern(x: number, z: number) {
-    mesh(pedGeo, M.plinth, [x, 0.425, z]);
-    for (const [dx, dz] of [[-0.13, -0.13], [0.13, -0.13], [-0.13, 0.13], [0.13, 0.13]]) mesh(postGeo, M.iron, [x + dx, 1.06, z + dz]);
-    mesh(capGeo, M.iron, [x, 1.34, z], { rot: [0, Math.PI / 4, 0] });
-    mesh(glassGeo, M.glass, [x, 1.06, z], { cast: false });
-    mesh(candleGeo, M.wax, [x, 0.93, z]);
-    flames.push(mesh(flameGeo, M.flame, [x, 1.05, z], { cast: false, receive: false }));
+  // --- guest chairs: cross-back chairs in rows down both sides of the aisle, facing the arbour ---
+  // One merged chair, instanced: every chair together is two draw calls.
+  const chairParts: THREE.BufferGeometry[] = [];
+  const part = (geo: THREE.BufferGeometry, pos: Vec3, rotZ = 0) => {
+    geo.rotateZ(rotZ);
+    geo.translate(...pos);
+    chairParts.push(geo);
+  };
+  part(new T.BoxGeometry(0.44, 0.05, 0.42), [0, 0.46, 0]);
+  for (const [lx, lz] of [[-0.19, -0.18], [0.19, -0.18]]) part(new T.CylinderGeometry(0.016, 0.014, 0.46, 6), [lx, 0.23, lz]);
+  for (const lx of [-0.19, 0.19]) part(new T.BoxGeometry(0.032, 1.02, 0.032), [lx, 0.51, 0.19]);
+  for (const tilt of [0.72, -0.72]) part(new T.BoxGeometry(0.026, 0.5, 0.014), [0, 0.74, 0.19], tilt);
+  part(new T.BoxGeometry(0.42, 0.05, 0.034), [0, 1.0, 0.19]);
+  part(new T.BoxGeometry(0.42, 0.03, 0.026), [0, 0.52, 0.19]);
+  const chairGeo = mergeBufferGeometries(chairParts)!;
+  chairParts.forEach((g) => g.dispose());
+  const cushionGeo = new T.BoxGeometry(0.4, 0.035, 0.38);
+  cushionGeo.translate(0, 0.5, -0.01);
+  const SEATS_X = [0.95, 1.5, 2.05], ROWS = 13, ROW_START = -4.4;
+  const CHAIRS = SEATS_X.length * 2 * ROWS;
+  const chairs = new T.InstancedMesh(chairGeo, M.chairWood, CHAIRS);
+  const cushions = new T.InstancedMesh(cushionGeo, M.cushion, CHAIRS);
+  [chairs, cushions].forEach((m) => { m.castShadow = true; m.receiveShadow = true; scene.add(m); });
+  // Posies tied to the aisle end of every other row.
+  const POSY_BLOOMS = 7, posyRows = Math.ceil(ROWS / 2);
+  const aisleBlooms = new T.InstancedMesh(cupGeo, M.petal, posyRows * 2 * POSY_BLOOMS);
+  const aisleLeaves = new T.InstancedMesh(leafGeo, M.leaf, posyRows * 2 * POSY_BLOOMS);
+  [aisleBlooms, aisleLeaves].forEach((m) => { m.castShadow = true; scene.add(m); });
+  let chairN = 0, bloomN = 0;
+  for (let row = 0; row < ROWS; row++) {
+    const z = ROW_START + row;
+    for (const side of [-1, 1]) {
+      for (const sx of SEATS_X) {
+        dummy.position.set(side * sx, 0, z);
+        dummy.rotation.set(0, (rand() - 0.5) * 0.06, 0);
+        dummy.scale.setScalar(1);
+        dummy.updateMatrix();
+        chairs.setMatrixAt(chairN, dummy.matrix);
+        cushions.setMatrixAt(chairN++, dummy.matrix);
+      }
+      if (row % 2) continue;
+      for (let b = 0; b < POSY_BLOOMS; b++) {
+        const x = side * (SEATS_X[0] - 0.25) + (rand() - 0.5) * 0.12, y = 0.86 + (rand() - 0.5) * 0.16, bz = z + 0.2 + (rand() - 0.5) * 0.12;
+        dummy.position.set(x, y, bz);
+        dummy.lookAt(x - side * 2, y + (rand() - 0.2), bz + (rand() - 0.5));
+        dummy.scale.setScalar(0.55 + rand() * 0.25);
+        dummy.updateMatrix();
+        aisleBlooms.setMatrixAt(bloomN, dummy.matrix);
+        aisleBlooms.setColorAt(bloomN, tint.set(pickColor()).convertSRGBToLinear());
+        dummy.position.set(x + (rand() - 0.5) * 0.1, y - 0.06, bz + (rand() - 0.5) * 0.1);
+        dummy.rotation.set(rand() * 6, rand() * 6, rand() * 6);
+        dummy.scale.setScalar(0.7);
+        dummy.updateMatrix();
+        aisleLeaves.setMatrixAt(bloomN++, dummy.matrix);
+      }
+    }
   }
-  for (let z = -4; z <= 8.5; z += 2.5) { lantern(-2.35, z); lantern(2.35, z); }
+
+  // --- string lights: festoon bulbs zigzagging over the aisle between poles ---
+  const POLE_Z = [-5.4, -1.4, 2.8, 7.4], POLE_X = 2.75, POLE_H = 3.1;
+  POLE_Z.forEach((z) => [-1, 1].forEach((side) => mesh(new T.CylinderGeometry(0.035, 0.045, POLE_H, 8), M.iron, [side * POLE_X, POLE_H / 2, z])));
+  const strands: [THREE.Vector3, THREE.Vector3][] = [];
+  POLE_Z.forEach((z, k) => {
+    const left = new T.Vector3(-POLE_X, POLE_H - 0.08, z), right = new T.Vector3(POLE_X, POLE_H - 0.08, z);
+    strands.push([left, right]);
+    if (k < POLE_Z.length - 1) strands.push([right, new T.Vector3(-POLE_X, POLE_H - 0.08, POLE_Z[k + 1])]);
+  });
+  const bulbSpots: THREE.Vector3[] = [];
+  strands.forEach(([a, b]) => {
+    // Each strand sags in the middle; bulbs hang at even spacing along it.
+    const at = (t: number) => new T.Vector3().lerpVectors(a, b, t).setY(a.y - 0.55 * 4 * t * (1 - t));
+    const wire = new T.CatmullRomCurve3(Array.from({ length: 13 }, (_, i) => at(i / 12)));
+    mesh(new T.TubeGeometry(wire, 24, 0.006, 4), M.iron, undefined, { cast: false, receive: false });
+    const count = Math.round(a.distanceTo(b) / 0.42);
+    for (let i = 1; i < count; i++) bulbSpots.push(at(i / count).setY(at(i / count).y - 0.07));
+  });
+  const bulbs = new T.InstancedMesh(new T.SphereGeometry(0.026, 10, 8), M.bulb, bulbSpots.length);
+  bulbSpots.forEach((p, i) => {
+    dummy.position.copy(p);
+    dummy.rotation.set(0, 0, 0);
+    dummy.scale.set(1, 1.25, 1);
+    dummy.updateMatrix();
+    bulbs.setMatrixAt(i, dummy.matrix);
+  });
+  scene.add(bulbs);
   // Every point light is paid for on every pixel of every lit surface, so phones keep two and the
-  // light scene none (the flames still glow).
-  const glowSpots: [number, number][] = phone ? [[-2.35, 1], [2.35, 6]] : [[-2.35, 1], [2.35, 1], [-2.35, 6], [2.35, 6]];
+  // light scene none (the bulbs still glow).
+  const glowSpots: [number, number][] = phone ? [[0, 0.6], [0, 5.2]] : [[-1.4, 0.6], [1.4, 0.6], [-1.4, 5.2], [1.4, 5.2]];
   const glowLights = glowSpots.map(([x, z]) => {
-    const l = new T.PointLight(col("#ffb46a"), 0.6, 6, 2);
-    l.position.set(x, 1.1, z);
+    const l = new T.PointLight(col("#ffc27a"), 0.6, 7, 2);
+    l.position.set(x, 2.5, z);
     if (!lite) scene.add(l);
     return l;
   });
@@ -483,10 +578,8 @@ export function createGardenScene(
   station(tableTop, "ask");
   station(card, "ask");
   mesh(new T.CylinderGeometry(0.03, 0.03, 0.008, 24), M.sealRed, [TABLE.x + 0.12, 0.77, TABLE.z + 0.2]);
-  mesh(candleGeo, M.wax, [TABLE.x - 0.2, 0.84, TABLE.z - 0.4]);
-  flames.push(mesh(flameGeo, M.flame, [TABLE.x - 0.2, 0.95, TABLE.z - 0.4], { cast: false, receive: false }));
-  const tableLight = new T.PointLight(col("#ffb46a"), 0.5, 3, 2);
-  tableLight.position.set(TABLE.x - 0.2, 1.05, TABLE.z - 0.4);
+  const tableLight = new T.PointLight(col("#ffc27a"), 0.5, 3.5, 2);
+  tableLight.position.set(TABLE.x - 0.3, 1.9, TABLE.z + 0.2);
   if (!lite) scene.add(tableLight);
   // a small posy on the table
   const posy = new T.Group();
@@ -543,29 +636,36 @@ export function createGardenScene(
     station(mesh(new T.PlaneGeometry(0.62, 0.8), printMaterial(photoTex(wallPhoto), { roughness: 0.45 }), [-4.89, y, z], { rot: [0, Math.PI / 2, 0], cast: false }), "memories");
   });
 
-  // --- petals: drifting in the air and floating on the pool ---
+  // --- petals: drifting in the air and scattered down the aisle runner ---
   const petalGeo = new T.CircleGeometry(0.03, 8);
   petalGeo.scale(1, 0.7, 1);
-  const AIR = reduceMotion ? 0 : phone ? 40 : 140, FLOAT = lite ? 30 : phone ? 50 : 90;
+  const AIR = reduceMotion ? 0 : phone ? 40 : 140, STREWN = lite ? 50 : phone ? 80 : 140;
   const airPetals = new T.InstancedMesh(petalGeo, M.petal, Math.max(AIR, 1));
-  const floatPetals = new T.InstancedMesh(petalGeo, M.petal, FLOAT);
+  const strewnPetals = new T.InstancedMesh(petalGeo, M.petal, STREWN);
   airPetals.visible = AIR > 0;
-  scene.add(airPetals, floatPetals);
+  strewnPetals.receiveShadow = true;
+  scene.add(airPetals, strewnPetals);
   const air = Array.from({ length: AIR }, () => ({ x: (rand() - 0.5) * 9, y: rand() * 6, z: -8 + rand() * 17, s: 0.4 + rand() * 0.6, r: rand() * 6, w: 0.2 + rand() * 0.5 }));
-  const floating = Array.from({ length: FLOAT }, () => ({ x: (rand() - 0.5) * 2.6, z: -5.2 + rand() * 13.4, r: rand() * 6, v: 0.02 + rand() * 0.05 }));
-  [airPetals, floatPetals].forEach((m) => {
-    for (let i = 0; i < m.count; i++) m.setColorAt(i, tint.set(["#f4ede2", "#e9c1b6", "#deba7e"][i % 3]).convertSRGBToLinear());
+  [airPetals, strewnPetals].forEach((m) => {
+    for (let i = 0; i < m.count; i++) m.setColorAt(i, tint.set(["#f4ede2", "#e9c1b6", "#6d1f2f", "#deba7e"][i % 4]).convertSRGBToLinear());
   });
+  // The strewn petals never move, so they are placed once.
+  for (let i = 0; i < STREWN; i++) {
+    dummy.position.set((rand() - 0.5) * 0.95, 0.014, -6.4 + rand() * 14.8);
+    dummy.rotation.set(-Math.PI / 2, 0, rand() * 6);
+    dummy.scale.setScalar(0.8 + rand() * 0.6);
+    dummy.updateMatrix();
+    strewnPetals.setMatrixAt(i, dummy.matrix);
+  }
 
   // --- draw calls: merge the static scenery ---
-  // Lanterns, plinths, hedges and trees are dozens of small meshes that never move. Merged per
-  // material they become a handful of draw calls. Stations (clickable), flames (they flicker) and the
-  // pool (it ripples on desktop) stay separate.
+  // Poles, wires, the arbour, hedges and trees are dozens of small meshes that never move. Merged
+  // per material they become a handful of draw calls. Stations (clickable) stay separate.
   scene.updateMatrixWorld(true);
   const groups = new Map<string, THREE.Mesh[]>();
   for (const o of [...scene.children]) {
     if (!(o instanceof T.Mesh) || o instanceof T.InstancedMesh || Array.isArray(o.material)) continue;
-    if (o.userData.chapter || flames.includes(o) || o.geometry === waterGeo) continue;
+    if (o.userData.chapter) continue;
     const key = `${o.material.uuid}|${o.castShadow}|${o.receiveShadow}`;
     groups.set(key, [...(groups.get(key) ?? []), o]);
   }
@@ -605,10 +705,10 @@ export function createGardenScene(
   composer.addPass(grade);
 
   // --- time of day ---
-  type Look = { sun: number; sunColor: string; hemi: number; exposure: number; fog: string; lamp: number; flame: number };
+  type Look = { sun: number; sunColor: string; hemi: number; exposure: number; fog: string; lamp: number; bulb: number };
   const LOOKS: Record<TimeOfDay, Look> = {
-    golden: { sun: 3.2, sunColor: "#ffc58f", hemi: 0.55, exposure: 1.0, fog: "#d9a98a", lamp: 0.6, flame: 1 },
-    evening: { sun: 0.35, sunColor: "#c98aa0", hemi: 0.22, exposure: 1.25, fog: "#262a40", lamp: 2.2, flame: 1.6 },
+    golden: { sun: 3.2, sunColor: "#ffc58f", hemi: 0.55, exposure: 1.0, fog: "#d9a98a", lamp: 0.6, bulb: 0.5 },
+    evening: { sun: 0.35, sunColor: "#c98aa0", hemi: 0.22, exposure: 1.25, fog: "#262a40", lamp: 2.2, bulb: 1.6 },
   };
   let look: Look = { ...LOOKS.golden }, lookFrom: Look | null = null, lookTo: Look | null = null, lookT = 1;
   function applyLook() {
@@ -619,9 +719,10 @@ export function createGardenScene(
     grade.uniforms.exposure.value = look.exposure;
     renderer.toneMappingExposure = look.exposure;
     fog.color.set(goal.fog).convertSRGBToLinear();
-    glowLights.forEach((l) => { l.userData.base = look.lamp; });
-    tableLight.userData.base = look.lamp * 0.8;
-    M.flame.color.setRGB(4 * look.flame, 2.2 * look.flame, 0.8 * look.flame);
+    // String lights shine steadily, unlike candles.
+    glowLights.forEach((l) => { l.intensity = look.lamp; });
+    tableLight.intensity = look.lamp * 0.8;
+    M.bulb.color.setRGB(3.2 * look.bulb, 2.2 * look.bulb, 1.1 * look.bulb);
   }
 
   // --- camera flight ---
@@ -654,7 +755,7 @@ export function createGardenScene(
   resize();
 
   // Rendering on demand: a frame is drawn when something changed. Full scenes always animate
-  // (petals, candles, a gentle camera sway); the light scene holds still between camera moves, so
+  // (drifting petals, a gentle camera sway); the light scene holds still between camera moves, so
   // a phone that is only being read stays cool. Behind the envelope nothing renders at all.
   const ambient = () => !lite && !reduceMotion;
 
@@ -733,26 +834,10 @@ export function createGardenScene(
     if (lookT < 1 && lookFrom && lookTo) {
       lookT = Math.min(1, lookT + dt / 1.6);
       const a = lookFrom, b = lookTo;
-      look = { ...look, sun: a.sun + (b.sun - a.sun) * lookT, hemi: a.hemi + (b.hemi - a.hemi) * lookT, exposure: a.exposure + (b.exposure - a.exposure) * lookT, lamp: a.lamp + (b.lamp - a.lamp) * lookT, flame: a.flame + (b.flame - a.flame) * lookT };
+      look = { ...look, sun: a.sun + (b.sun - a.sun) * lookT, hemi: a.hemi + (b.hemi - a.hemi) * lookT, exposure: a.exposure + (b.exposure - a.exposure) * lookT, lamp: a.lamp + (b.lamp - a.lamp) * lookT, bulb: a.bulb + (b.bulb - a.bulb) * lookT };
     }
     applyLook();
 
-    // candle flicker
-    if (ambient()) flames.forEach((f, i) => f.scale.set(1, 1 + Math.sin(t * 9 + i * 1.7) * 0.06 + Math.sin(t * 23 + i) * 0.04, 1));
-    if (ambient()) [...glowLights, tableLight].forEach((l, i) => {
-      l.intensity = ((l.userData.base as number) || 0.6) * (0.9 + Math.sin(t * 8 + i * 2.1) * 0.06 + Math.sin(t * 19 + i) * 0.04);
-    });
-
-    // water ripples (desktop)
-    if (!phone && !reduceMotion && frames % 2 === 0) {
-      const p = waterGeo.attributes.position.array as Float32Array;
-      for (let i = 0; i < p.length; i += 3) {
-        const x = waterBase[i], y = waterBase[i + 1];
-        p[i + 2] = Math.sin(x * 3.1 + t * 1.3) * 0.008 + Math.sin(y * 1.7 - t * 0.9) * 0.01 + Math.sin((x + y) * 5 + t * 2.1) * 0.004;
-      }
-      waterGeo.attributes.position.needsUpdate = true;
-      waterGeo.computeVertexNormals();
-    }
     // petals
     for (let i = 0; i < (airPetals.visible ? AIR : 0); i++) {
       const a = air[i];
@@ -767,16 +852,6 @@ export function createGardenScene(
       airPetals.setMatrixAt(i, dummy.matrix);
     }
     if (AIR && airPetals.visible) airPetals.instanceMatrix.needsUpdate = true;
-    for (let i = 0; i < FLOAT; i++) {
-      const f = floating[i];
-      if (ambient()) { f.z += dt * f.v; if (f.z > 8.2) f.z = -5.2; }
-      dummy.position.set(f.x + Math.sin(t * 0.5 + i) * 0.02, 0.07, f.z);
-      dummy.rotation.set(-Math.PI / 2, 0, f.r + (ambient() ? t * 0.05 : 0));
-      dummy.scale.setScalar(1);
-      dummy.updateMatrix();
-      floatPetals.setMatrixAt(i, dummy.matrix);
-    }
-    floatPetals.instanceMatrix.needsUpdate = true;
 
     grade.uniforms.time.value = t % 10;
     try {
