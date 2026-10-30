@@ -278,8 +278,12 @@ export function createGardenScene(
         g.beginPath(); g.moveTo(cx - r * 0.3, cy - r * 0.45); g.lineTo(cx + r * 0.5, cy); g.lineTo(cx - r * 0.3, cy + r * 0.45); g.fill();
       }
       g.fillStyle = "rgba(255,255,255,0.94)";
+      // Long captions shrink to stay inside the frame.
+      const pad = 56 * (w / 1024);
       g.font = display(60 * (w / 1024), "italic");
-      g.fillText(caption, 56 * (w / 1024), h - 64 * (w / 1024));
+      const fit = Math.min(1, (w - pad * 2) / g.measureText(caption).width);
+      g.font = display(60 * (w / 1024) * fit, "italic");
+      g.fillText(caption, pad, h - 64 * (w / 1024));
     };
     const tex = canvasTex(w, h, draw);
     const redraw = () => {
