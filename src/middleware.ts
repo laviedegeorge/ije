@@ -3,8 +3,8 @@ import { isDisabledPath } from "@/config/event";
 import { isValidInviteCode, type InviteListKind } from "@/util/inviteList";
 import { GATE_COOKIE, getGatePassword, setGateCookie, verifyGateToken } from "@/util/siteGate";
 
-/** Reachable without the site password. */
-const UNGATED_PATHS = new Set(["/unlock", "/api/unlock"]);
+/** Reachable without the site password. /ff is Nonye's personal invitation. */
+const UNGATED_PATHS = new Set(["/unlock", "/api/unlock", "/ff"]);
 
 /** Personal-link pages: a valid `?c=` code stands in for the site password. */
 const INVITE_PAGES: Record<string, InviteListKind> = {
