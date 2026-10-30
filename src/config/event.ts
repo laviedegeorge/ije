@@ -67,7 +67,7 @@ export const event = {
   gifts: {
     bankName: "Moniepoint Microfinance Bank",
     accountNumber: "8062242901",
-    accountName: "",
+    accountName: "Kelechi Apugo",
   },
 
   /**

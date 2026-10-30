@@ -1,0 +1,212 @@
+/* Garden Experience template (from Wedoo): a live 3D courtyard fills the screen; chapters fly the
+   camera and swap one glass panel. No page scroll. Everything is scoped to .garden. The colours are
+   the wedding site's: brown, burgundy, champagne gold and warm paper (see src/styles/global.css). */
+.garden {
+  --leaf: #6e523c;
+  --petal: #6d1f2f;
+  --linen: #fffcf7;
+  --ink: #3a2e26;
+  --ink-soft: #5c4a3d;
+  --glass: rgb(255 252 247 / 0.84);
+  --gold: #deba7e;
+  --chip: rgb(36 26 20 / 0.38);
+  --pen: #3a2e26;
+  --display: var(--garden-display), "Bodoni 72", Didot, Georgia, serif;
+  --body: var(--garden-body), "Helvetica Neue", Arial, sans-serif;
+  --script: var(--garden-script), cursive;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #241a14;
+  color: var(--ink);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+  color-scheme: dark;
+}
+.garden button, .garden input, .garden select { font: inherit; color: inherit; }
+.garden :focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+
+.garden [hidden] { display: none !important; }
+.garden .world { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: pan-y; }
+.garden .fallback { position: fixed; inset: 0; background: linear-gradient(180deg, #5c4a3d, #c9a87c 60%, #3a2e26); }
+.garden .loading { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: #241a14; color: rgb(255 255 255 / .75); font-size: 12px; letter-spacing: .24em; text-transform: uppercase; transition: opacity .9s ease, visibility 0s linear .9s; }
+.garden .loading.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+
+/* Opening: a sealed paper envelope over the softened courtyard. Tap the wax seal: it breaks, the flap
+   lifts and the site opens on Welcome (or on RSVP, for an RSVP link). */
+.garden .opening { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; color: #fff; transition: opacity .9s ease, visibility 0s linear .9s; }
+.garden .opening::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, rgb(24 18 22 / .15), rgb(12 10 16 / .68)); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.garden .opening.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+.garden .sealed { position: relative; display: grid; justify-items: center; gap: 24px; width: min(560px, 100%); transition: opacity .8s ease, transform 1s ease; }
+.garden .opening.leaving .sealed, .garden .opening.gone .sealed { opacity: 0; transform: scale(1.05); }
+.garden .kicker { margin: 0; font-size: 11px; font-weight: 600; letter-spacing: .3em; text-transform: uppercase; text-shadow: 0 2px 14px rgb(0 0 0 / .55); transition: opacity .5s; }
+.garden .hint { margin: 0; font-size: 12px; color: rgb(255 255 255 / .82); text-shadow: 0 2px 10px rgb(0 0 0 / .5); transition: opacity .5s; }
+.garden .sealed.cracked .kicker, .garden .sealed.cracked .hint, .garden .sealed.opened .kicker, .garden .sealed.opened .hint { opacity: 0; }
+.garden .svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+.garden .envelope { position: relative; width: 100%; aspect-ratio: 1.5; perspective: 1800px; cursor: pointer; transform: rotate(-1.2deg);
+  filter: drop-shadow(0 2px 2px rgb(30 20 10 / .25)) drop-shadow(0 26px 30px rgb(0 0 0 / .42)); transition: transform 1s ease; }
+.garden .sealed.cracked .envelope, .garden .sealed.opened .envelope { transform: none; }
+.garden .envelope svg { position: absolute; display: block; overflow: visible; }
+.garden .env-back { inset: 0; width: 100%; height: 100%; }
+.garden .env-pocket { inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
+.garden .env-to { position: absolute; z-index: 4; left: 0; right: 0; bottom: 9%; margin: 0; text-align: center; pointer-events: none; color: var(--pen); }
+.garden .env-to span { font: 400 clamp(24px, 5.4vw, 34px)/1.1 var(--script); opacity: .9; }
+.garden .env-flap { position: absolute; left: 0; right: 0; top: 0; height: 64%; z-index: 5; transform-origin: 50% 0; transform-style: preserve-3d; transition: transform 1.05s cubic-bezier(.5,0,.2,1); }
+.garden .env-flap svg { inset: 0; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+/* The lined inside faces backwards but is not mirrored, so once the flap folds up it points up from the top edge. */
+.garden .env-flap .inside { transform: rotateX(180deg) scaleY(-1); }
+.garden .sealed.opened .env-flap { transform: rotateX(180deg); }
+
+/* Wax seal: an SVG relief lit from the top left, so the pressed initials read as an impression in the wax. */
+.garden .seal { position: absolute; z-index: 6; left: 50%; top: 63%; width: 116px; height: 116px; margin: -58px 0 0 -58px; border: 0; padding: 0; background: none; cursor: pointer; border-radius: 50%;
+  filter: drop-shadow(1px 3px 2px rgb(60 10 8 / .45)) drop-shadow(0 8px 10px rgb(40 10 8 / .25)); }
+.garden .seal::before { content: ""; position: absolute; inset: -14px; border-radius: 50%; border: 1px solid rgb(255 236 210 / .7); opacity: 0; animation: garden-halo 2.8s ease-out infinite; }
+.garden .seal .half { position: absolute; inset: 0; }
+.garden .seal .half svg { position: static; width: 100%; height: 100%; }
+/* Classes, not :first/:last-child: the falling crumbs are appended to the seal. */
+.garden .seal .half-left { clip-path: polygon(0 0, 53% 0, 47% 30%, 56% 52%, 46% 74%, 52% 100%, 0 100%); }
+.garden .seal .half-right { clip-path: polygon(53% 0, 100% 0, 100% 100%, 52% 100%, 46% 74%, 56% 52%, 47% 30%); }
+.garden .sealed.cracked .seal, .garden .sealed.opened .seal { pointer-events: none; }
+.garden .sealed.cracked .seal::before, .garden .sealed.opened .seal::before { animation: none; }
+.garden .crumb { position: absolute; left: 50%; top: 50%; border-radius: 42% 58% 50% 50%; background: radial-gradient(circle at 35% 30%, #9a3446, #4a1420); pointer-events: none; }
+@keyframes garden-halo { 0% { opacity: .8; transform: scale(.86); } 100% { opacity: 0; transform: scale(1.25); } }
+
+/* Chrome */
+.garden .app { position: fixed; inset: 0; z-index: 5; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); pointer-events: none; opacity: 0; transition: opacity .9s ease 1.2s; }
+.garden .app.ready { opacity: 1; }
+.garden .app.ready > * { pointer-events: auto; }
+.garden .app .stage { pointer-events: none; }
+.garden .app.ready .panel { pointer-events: auto; }
+.garden .top { display: flex; align-items: center; gap: 18px; padding-block: 16px; min-width: 0; }
+.garden .monogram { flex: none; font: italic 400 22px/1 var(--display); color: #fff; text-shadow: 0 1px 12px rgb(0 0 0 / .45); white-space: nowrap; }
+.garden .chapters { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; min-width: 0; margin-inline: auto; padding: 4px; border-radius: 999px; background: var(--chip); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.garden .chapters::-webkit-scrollbar { display: none; }
+.garden .chapters button { flex: none; border: 0; background: none; color: rgb(255 255 255 / .84); padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background .3s, color .3s; }
+.garden .chapters button:hover { color: #fff; background: rgb(255 255 255 / .12); }
+.garden .chapters button[aria-current="true"] { background: var(--linen); color: var(--ink); }
+.garden .rsvp-cta { flex: none; border: 0; border-radius: 999px; padding: 9px 16px; background: var(--petal); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+.garden .stage { display: grid; align-items: center; justify-items: end; min-height: 0; padding-block: 8px; }
+.garden .stage[data-side="left"] { justify-items: start; }
+.garden .panel { width: min(420px, 100%); max-height: 100%; overflow-y: auto; overscroll-behavior: contain; background: var(--glass); backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2); border-radius: 24px; padding: 30px 28px; box-shadow: 0 30px 80px rgb(6 8 14 / .4); margin-right: clamp(0px, 3vw, 44px); }
+.garden .stage[data-side="left"] .panel { margin-right: 0; margin-left: clamp(0px, 3vw, 44px); }
+/* Welcome sits inside the rose arch and follows it as the camera moves (--ax/--ay are set every frame). */
+.garden .panel.anchored { position: fixed; left: var(--ax, 50%); top: var(--ay, 46%); translate: -50% -50%; width: clamp(250px, 37vh, 340px); max-height: none; margin: 0; padding: 24px 22px; text-align: center; background: rgb(255 252 247 / .72); }
+.garden .panel.anchored h1 { font-size: clamp(32px, 5.2vh, 44px); }
+.garden .panel.anchored .rule { margin-inline: auto; }
+.garden .panel.anchored .count { justify-content: center; }
+.garden .sheet-handle { display: none; }
+.garden .panel.enter { animation: garden-panel-in .7s cubic-bezier(.22,.8,.2,1) .35s both; }
+@keyframes garden-panel-in { from { opacity: 0; transform: translateY(16px); } }
+.garden .panel .eyebrow { margin: 0 0 10px; font-size: 11px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--petal); }
+.garden .panel h1, .garden .panel h2 { margin: 0; font-family: var(--display); font-weight: 400; color: var(--ink); text-wrap: balance; }
+.garden .panel h1 { font-size: clamp(38px, 5.4vw, 54px); line-height: 1.02; }
+.garden .panel h1 em { font-style: italic; color: var(--petal); }
+.garden .panel h2 { font-size: clamp(28px, 4vw, 36px); line-height: 1.1; }
+.garden .panel p { line-height: 1.65; color: var(--ink-soft); margin: 12px 0 0; max-width: 62ch; }
+.garden .panel .when { margin-top: 0; font: 500 15px/1.4 var(--display); letter-spacing: .03em; color: var(--ink); }
+.garden .panel .note { font-size: 12px; }
+.garden .rule { width: 56px; height: 1px; background: var(--petal); margin: 18px 0; border: 0; }
+.garden .count { display: flex; gap: 22px; margin-top: 20px; }
+.garden .count div { display: grid; }
+.garden .count b { font: 400 32px/1 var(--display); color: var(--leaf); font-variant-numeric: tabular-nums; }
+.garden .count span { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-top: 6px; }
+.garden .list { display: grid; margin-top: 14px; }
+.garden .item { display: grid; grid-template-columns: 74px 1fr; gap: 16px; padding-block: 13px; border-top: 1px solid rgb(58 46 38 / .12); }
+.garden .item:first-child { border-top: 0; }
+.garden .item time { font-size: 12px; font-weight: 600; color: var(--leaf); line-height: 1.4; }
+.garden .item h3 { margin: 0; font: 500 18px/1.25 var(--display); color: var(--ink); }
+.garden .item p { margin: 4px 0 0; font-size: 14px; }
+/* The question: a yes that opens WhatsApp, and a gentler "not yet". */
+.garden .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.garden .primary { display: inline-flex; align-items: center; border: 0; border-radius: 999px; padding: 13px 20px; background: var(--petal); color: #fff; font-weight: 600; text-decoration: none; cursor: pointer; }
+.garden .primary:hover { background: #5a1826; }
+.garden .secondary { border: 1px solid rgb(58 46 38 / .25); border-radius: 999px; padding: 12px 18px; background: rgb(255 255 255 / .6); color: var(--ink); font-weight: 500; cursor: pointer; }
+.garden .done { margin-top: 16px; padding: 18px; border-radius: 16px; background: rgb(110 82 60 / .1); }
+.garden .done h3 { margin: 0; font: 400 24px/1.15 var(--display); color: var(--ink); }
+.garden .linkish { display: inline-block; margin-top: 10px; border: 0; background: none; padding: 0; font-size: 13px; font-weight: 600; color: var(--leaf); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.garden .thumbs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.garden .thumbs button { position: relative; border: 0; padding: 0; border-radius: 10px; overflow: hidden; cursor: zoom-in; aspect-ratio: 1; background: #ddd; }
+.garden .thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s ease; }
+.garden .thumbs button:hover img { transform: scale(1.05); }
+.garden .thumbs span { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 7px 5px; font-size: 10.5px; font-weight: 600; color: #fff; text-align: left; background: linear-gradient(transparent, rgb(0 0 0 / .55)); }
+.garden .thumbs .play { position: absolute; top: 50%; left: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; background: rgb(20 14 12 / .45); box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .9); }
+.garden .thumbs .play::after { content: ""; position: absolute; top: 50%; left: 54%; translate: -50% -50%; border-style: solid; border-width: 7px 0 7px 11px; border-color: transparent transparent transparent #fff; }
+.garden .lightbox { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 24px; background: rgb(10 10 14 / .86); cursor: zoom-out; animation: garden-fade-in .3s ease; }
+.garden .lightbox figure { margin: 0; display: grid; gap: 12px; justify-items: center; }
+.garden .lightbox img, .garden .lightbox video { max-width: min(1000px, 100%); max-height: 78vh; border-radius: 6px; box-shadow: 0 30px 80px rgb(0 0 0 / .5); }
+.garden .lightbox video { cursor: auto; background: #000; }
+.garden .lightbox figcaption { font: italic 400 22px/1.2 var(--display); color: #fff; }
+.garden .lightbox button { position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgb(255 255 255 / .14); color: #fff; font-size: 24px; cursor: pointer; }
+@keyframes garden-fade-in { from { opacity: 0; } }
+
+/* Places in the garden: a label over each chapter's object on the Welcome view. Off-screen ones wait at the edge. */
+.garden .spots { position: fixed; inset: 0; z-index: 6; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .5s ease, visibility 0s linear .5s; }
+.garden .spots.on { opacity: 1; visibility: visible; transition: opacity .6s ease; }
+.garden .spots.on .spot { pointer-events: auto; }
+.garden .spot { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; gap: 7px; translate: -50% -100%; border: 0; background: none; padding: 0; color: #fff; cursor: pointer; }
+.garden .spot span { padding: 7px 13px; border-radius: 999px; background: rgb(36 26 20 / .55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-size: 13px; font-weight: 600; white-space: nowrap; box-shadow: 0 6px 18px rgb(0 0 0 / .25); transition: background .25s, color .25s, transform .25s; }
+.garden .spot i { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: garden-ping 2.4s ease-out infinite; }
+.garden .spot:hover span, .garden .spot.hot span, .garden .spot:focus-visible span { background: var(--linen); color: var(--ink); transform: translateY(-2px); }
+.garden .spot[data-edge="left"] { translate: 0 -50%; }
+.garden .spot[data-edge="right"] { translate: -100% -50%; }
+.garden .spot[data-edge="left"] i, .garden .spot[data-edge="right"] i { display: none; }
+.garden .spot[data-edge="left"] span::before { content: "‹ "; }
+.garden .spot[data-edge="right"] span::after { content: " ›"; }
+@keyframes garden-ping { 0% { box-shadow: 0 0 0 0 rgb(255 255 255 / .6); } 100% { box-shadow: 0 0 0 12px rgb(255 255 255 / 0); } }
+
+.garden .bottom { display: flex; align-items: center; gap: 12px; padding-block: 14px 18px; }
+.garden .step { border: 0; background: var(--chip); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #fff; padding: 10px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; min-width: 0; }
+.garden .step:hover { background: rgb(36 26 20 / .55); }
+.garden .step .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.garden .step.ghost { visibility: hidden; }
+.garden .dots { display: flex; gap: 6px; margin-inline: auto; }
+.garden .dots i { width: 6px; height: 6px; border-radius: 50%; background: rgb(255 255 255 / .4); transition: width .3s, background .3s; }
+.garden .dots i.on { width: 20px; border-radius: 6px; background: #fff; }
+.garden .toggles { position: fixed; z-index: 6; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(70px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--chip); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); opacity: 0; pointer-events: none; transition: opacity .8s ease 1.4s; }
+.garden .app.ready ~ .toggles { opacity: 1; pointer-events: auto; }
+.garden .toggles button { border: 0; background: none; color: rgb(255 255 255 / .82); font-size: 11px; font-weight: 600; padding: 6px 11px; border-radius: 999px; cursor: pointer; }
+.garden .toggles button[aria-pressed="true"] { background: rgb(255 255 255 / .92); color: var(--ink); }
+
+@media (max-width: 720px) {
+  .garden .envelope { aspect-ratio: 1.25; }
+  .garden .seal { width: 92px; height: 92px; margin: -46px 0 0 -46px; }
+  .garden .top { flex-wrap: wrap; gap: 10px; padding-block: 12px 6px; }
+  .garden .rsvp-cta { margin-left: auto; padding: 8px 14px; }
+  .garden .chapters { order: 3; width: 100%; margin-inline: 0; }
+  /* Chapters open as a bottom sheet that scrolls inside itself. */
+  .garden .stage, .garden .stage[data-side="left"] { align-items: end; justify-items: stretch; }
+  /* Compact by default so the object stays visible above it; the handle expands it. */
+  .garden .panel, .garden .stage[data-side="left"] .panel { width: 100%; max-height: min(40dvh, 100%); margin: 0; padding: 0 18px 20px; border-radius: 22px; transition: max-height .45s cubic-bezier(.3,.7,.2,1); }
+  .garden .panel.expanded, .garden .stage[data-side="left"] .panel.expanded { max-height: min(78dvh, 100%); }
+  .garden .sheet-handle { position: sticky; top: 0; z-index: 1; display: grid; place-items: center; width: calc(100% + 36px); height: 26px; margin: 0 -18px 4px; border: 0; padding: 0; background: rgb(255 252 247 / .9); cursor: pointer; }
+  .garden .sheet-handle i { width: 40px; height: 4px; border-radius: 4px; background: rgb(58 46 38 / .3); }
+  .garden .panel h2 { font-size: 26px; }
+  /* More solid on phones so the names, date and countdown read clearly over the busy arch. */
+  .garden .panel.anchored { width: min(270px, 68vw); padding: 18px 16px; background: rgb(255 252 247 / .93); backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2); }
+  .garden .panel.anchored h1 { font-size: 34px; }
+  .garden .panel.anchored .count { gap: 18px; margin-top: 14px; }
+  .garden .panel.anchored .count b { font-size: 26px; }
+  .garden .panel.anchored .note { display: none; }
+  .garden .item { grid-template-columns: 64px 1fr; gap: 12px; }
+  .garden .spot span { font-size: 12px; padding: 6px 11px; }
+  .garden .step .lbl { max-width: 24vw; }
+  .garden .toggles { bottom: auto; top: calc(108px + env(safe-area-inset-top, 0px)); }
+  /* The sheet needs the room, so the time-of-day switch shows on Welcome only. */
+  .garden .app.ready ~ .toggles.in-chapter { opacity: 0; pointer-events: none; transition-delay: 0s; }
+}
+/* Phones: a live backdrop blur over a moving 3D canvas is re-blurred every frame, a common cause of
+   stutter on Android. Solid fills read just as well. The envelope's paper and wax use heavy SVG
+   filters, so the moving pieces get their own GPU layers and are not repainted while they animate. */
+@media (max-width: 720px) {
+  .garden .panel, .garden .chapters, .garden .step, .garden .toggles, .garden .spot span { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .garden .panel, .garden .stage[data-side="left"] .panel { background: rgb(255 252 247 / .96); }
+  .garden .panel.anchored { background: rgb(255 252 247 / .95); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .garden .chapters, .garden .step, .garden .toggles { background: rgb(36 26 20 / .66); }
+  .garden .spot span { background: rgb(36 26 20 / .74); }
+  .garden .env-flap, .garden .seal .half, .garden .envelope { will-change: transform; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .garden *, .garden *::before, .garden *::after { animation: none !important; transition-duration: 0s !important; transition-delay: 0s !important; }
+}
