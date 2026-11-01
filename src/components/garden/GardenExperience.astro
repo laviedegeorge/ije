@@ -131,6 +131,7 @@ const reply = replyHref(content.ask);
   <template data-chapter="days">
     <p class="eyebrow">{content.gathering.eyebrow}</p>
     <h2>{content.gathering.headline}</h2>
+    {content.gathering.intro ? <p>{content.gathering.intro}</p> : null}
     <div class="list">
       {content.gathering.items.map((item) => (
         <div class="item">
@@ -146,6 +147,7 @@ const reply = replyHref(content.ask);
     <p class="eyebrow">{content.ask.eyebrow}</p>
     <h2>{content.guestName}, {content.ask.question}</h2>
     {content.ask.paragraphs.map((p) => <p>{p}</p>)}
+    {content.ask.signoff ? <p class="signoff">{content.ask.signoff}</p> : null}
     <div data-ask-open>
       <div class="actions">
         <a class="primary" href={reply} target="_blank" rel="noopener noreferrer" data-yes>{content.ask.yesLabel}</a>

@@ -38,7 +38,7 @@ export type GardenContent = {
   cardPlace: string;
   welcome: { eyebrow: string; note: string };
   story: { eyebrow: string; headline: string; paragraphs: string[]; portrait: GardenPhoto };
-  gathering: { eyebrow: string; headline: string; items: GardenGathering[] };
+  gathering: { eyebrow: string; headline: string; intro?: string; items: GardenGathering[] };
   memories: { eyebrow: string; headline: string; intro: string };
   /** The three pictures hung on the hedge. */
   wall: GardenPhoto[];
@@ -55,6 +55,8 @@ export type GardenContent = {
     /** The role, lettered large on the card on the table. */
     role: string;
     paragraphs: string[];
+    /** Signed under the letter, before the buttons; line breaks are kept. */
+    signoff?: string;
     yesLabel: string;
     waitLabel: string;
     waitMessage: string;
