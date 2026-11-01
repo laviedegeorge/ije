@@ -38,11 +38,21 @@ export type GardenContent = {
   cardPlace: string;
   welcome: { eyebrow: string; note: string };
   story: { eyebrow: string; headline: string; paragraphs: string[]; portrait: GardenPhoto };
-  gathering: { eyebrow: string; headline: string; items: GardenGathering[] };
+  gathering: { eyebrow: string; headline: string; intro?: string; items: GardenGathering[] };
   memories: { eyebrow: string; headline: string; intro: string };
+  /**
+   * The guest walks the chapters in order with the back and next buttons only: the chapter bar
+   * just shows where she is, and the labels, objects and Answer button that jump ahead are left out.
+   */
+  inOrder?: boolean;
   /** The three pictures hung on the hedge. */
   wall: GardenPhoto[];
   gallery: GardenPhoto[];
+  /**
+   * Either an audio file (src) or a Spotify track id (spotify); it starts when the seal is broken.
+   * The header button pauses the audio file, or shows the Spotify player.
+   */
+  song?: { title: string; artist: string; src?: string; spotify?: string };
   ask: {
     eyebrow: string;
     /** Shown after the guest's name: "Nonye, will you be my chief bridesmaid?" */
@@ -50,6 +60,8 @@ export type GardenContent = {
     /** The role, lettered large on the card on the table. */
     role: string;
     paragraphs: string[];
+    /** Signed under the letter, before the buttons; line breaks are kept. */
+    signoff?: string;
     yesLabel: string;
     waitLabel: string;
     waitMessage: string;

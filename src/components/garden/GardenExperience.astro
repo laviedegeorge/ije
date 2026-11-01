@@ -28,7 +28,7 @@ const reply = replyHref(content.ask);
   </div>
 
   <div class="spots" aria-label="Places in the garden" data-spots>
-    {CHAPTERS.filter((c) => c.id !== "welcome").map((c) => (
+    {!content.inOrder && CHAPTERS.filter((c) => c.id !== "welcome").map((c) => (
       <button type="button" class="spot" data-spot={c.id} data-go={c.id}>
         <i />
         <span>{c.label}</span>
@@ -40,11 +40,22 @@ const reply = replyHref(content.ask);
     <header class="top">
       <img class="monogram" src="/assets/monogram-white.webp" alt={coupleNames} width="263" height="240" decoding="async" />
       <nav class="chapters" aria-label="Chapters">
-        {CHAPTERS.map((c, n) => (
+        {CHAPTERS.map((c, n) => content.inOrder ? (
+          <span aria-current={n === 0 ? "step" : "false"}>{c.label}</span>
+        ) : (
           <button type="button" aria-current={n === 0 ? "true" : "false"} data-go={c.id}>{c.label}</button>
         ))}
       </nav>
-      <button class="rsvp-cta" type="button" data-go="ask">Answer</button>
+      {content.song?.spotify ? (
+        <button class="music" type="button" aria-expanded="false" aria-controls="garden-song" aria-label={`Music player: ${content.song.title} by ${content.song.artist}`} hidden data-music>
+          <i /><i /><i />
+        </button>
+      ) : content.song?.src ? (
+        <button class="music" type="button" aria-pressed="false" aria-label={`Play ${content.song.title} by ${content.song.artist}`} hidden data-music>
+          <i /><i /><i />
+        </button>
+      ) : null}
+      {!content.inOrder && <button class="rsvp-cta" type="button" data-go="ask">Answer</button>}
     </header>
     <main class="stage" data-side="right" data-stage>
       <article class="panel enter anchored" tabindex="-1" aria-live="polite" data-panel></article>
@@ -67,6 +78,15 @@ const reply = replyHref(content.ask);
     <button type="button" aria-pressed="true" data-time="golden">Golden hour</button>
     <button type="button" aria-pressed="false" data-time="evening">Evening</button>
   </div>
+
+  {content.song?.spotify ? (
+    <div class="song-card" id="garden-song" role="region" aria-label="Music player" inert data-song-card>
+      <div data-spotify></div>
+      <button type="button" aria-label="Hide the player" data-song-close>×</button>
+    </div>
+  ) : content.song?.src ? (
+    <audio src={content.song.src} preload="none" loop data-song />
+  ) : null}
 
   <div class="lightbox" role="dialog" aria-modal="true" hidden data-lightbox>
     <figure>
@@ -113,6 +133,7 @@ const reply = replyHref(content.ask);
   <template data-chapter="days">
     <p class="eyebrow">{content.gathering.eyebrow}</p>
     <h2>{content.gathering.headline}</h2>
+    {content.gathering.intro ? <p>{content.gathering.intro}</p> : null}
     <div class="list">
       {content.gathering.items.map((item) => (
         <div class="item">
@@ -128,6 +149,7 @@ const reply = replyHref(content.ask);
     <p class="eyebrow">{content.ask.eyebrow}</p>
     <h2>{content.guestName}, {content.ask.question}</h2>
     {content.ask.paragraphs.map((p) => <p>{p}</p>)}
+    {content.ask.signoff ? <p class="signoff">{content.ask.signoff}</p> : null}
     <div data-ask-open>
       <div class="actions">
         <a class="primary" href={reply} target="_blank" rel="noopener noreferrer" data-yes>{content.ask.yesLabel}</a>
