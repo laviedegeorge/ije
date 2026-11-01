@@ -104,9 +104,8 @@ export const ffInviteContent: GardenContent = {
 	inOrder: true,
 	wall: [memories.video1, memories.photo1, memories.video4],
 	gallery: Object.values(memories),
-	// Spotify until there's an audio file; to switch, replace `spotify` with
-	// src: media("beautiful-things.mp3") and add the file to public/assets/ff/.
-	song: { title: "Beautiful Things", artist: "Benson Boone", spotify: "6tNQ70jh4OwmPGpYy6R2o9" },
+	// Trimmed of the 20s of silence at its end, so the loop runs straight back to the start.
+	song: { title: "Beautiful Things", artist: "Benson Boone", src: media("beautiful-things.m4a") },
 	ask: {
 		eyebrow: `${event.partnerOne.firstName} & ${event.partnerTwo.firstName} · ${event.countdownLabel}`,
 		question: "will you be my chief bridesmaid?",
