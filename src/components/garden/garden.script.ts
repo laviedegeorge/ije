@@ -347,7 +347,6 @@ export function mountGarden(root: HTMLElement): void {
     songOn = on;
     musicButton.setAttribute("aria-pressed", String(on));
     musicButton.setAttribute("aria-label", `${on ? "Pause" : "Play"} ${songName}`);
-    showPlaying(on);
     resumeSong();
   }
 
@@ -438,6 +437,9 @@ export function mountGarden(root: HTMLElement): void {
     else setSong(true);
   }
 
+  // The bars follow the file itself, so they rest while a video has the song paused.
+  song?.addEventListener("playing", () => showPlaying(true));
+  song?.addEventListener("pause", () => showPlaying(false));
   // A missing or unplayable file hides the button instead of leaving it dead.
   song?.addEventListener("error", () => {
     songOn = false;
