@@ -44,6 +44,15 @@ const reply = replyHref(content.ask);
           <button type="button" aria-current={n === 0 ? "true" : "false"} data-go={c.id}>{c.label}</button>
         ))}
       </nav>
+      {content.song?.spotify ? (
+        <button class="music" type="button" aria-expanded="false" aria-controls="garden-song" aria-label={`Music player: ${content.song.title} by ${content.song.artist}`} hidden data-music>
+          <i /><i /><i />
+        </button>
+      ) : content.song?.src ? (
+        <button class="music" type="button" aria-pressed="false" aria-label={`Play ${content.song.title} by ${content.song.artist}`} hidden data-music>
+          <i /><i /><i />
+        </button>
+      ) : null}
       <button class="rsvp-cta" type="button" data-go="ask">Answer</button>
     </header>
     <main class="stage" data-side="right" data-stage>
@@ -67,6 +76,15 @@ const reply = replyHref(content.ask);
     <button type="button" aria-pressed="true" data-time="golden">Golden hour</button>
     <button type="button" aria-pressed="false" data-time="evening">Evening</button>
   </div>
+
+  {content.song?.spotify ? (
+    <div class="song-card" id="garden-song" role="region" aria-label="Music player" inert data-song-card>
+      <div data-spotify></div>
+      <button type="button" aria-label="Hide the player" data-song-close>×</button>
+    </div>
+  ) : content.song?.src ? (
+    <audio src={content.song.src} preload="none" loop data-song />
+  ) : null}
 
   <div class="lightbox" role="dialog" aria-modal="true" hidden data-lightbox>
     <figure>

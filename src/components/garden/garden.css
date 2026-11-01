@@ -85,6 +85,24 @@
 .garden .chapters button { flex: none; border: 0; background: none; color: rgb(255 255 255 / .84); padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background .3s, color .3s; }
 .garden .chapters button:hover { color: #fff; background: rgb(255 255 255 / .12); }
 .garden .chapters button[aria-current="true"] { background: var(--linen); color: var(--ink); }
+/* Music: three bars that dance while the song plays and rest when it is paused. */
+.garden .music { flex: none; display: flex; align-items: flex-end; justify-content: center; gap: 3px; width: 36px; height: 36px; padding: 11px 0; border: 0; border-radius: 50%; background: var(--chip); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); cursor: pointer; }
+.garden .music i { width: 3px; height: 30%; border-radius: 2px; background: #fff; transition: height .3s; }
+.garden .music.playing i { animation: music-bar .9s ease-in-out infinite alternate; }
+.garden .music.playing i:nth-child(2) { animation-delay: -.3s; }
+.garden .music.playing i:nth-child(3) { animation-delay: -.6s; }
+@keyframes music-bar { from { height: 25%; } to { height: 100%; } }
+.garden .music[aria-expanded="true"] { background: rgb(255 255 255 / .92); }
+.garden .music[aria-expanded="true"] i { background: var(--ink); }
+/* The Spotify player, brought out by the music button: a small card under the header on the left,
+   clear of the chapter panels. Tucked away it stays rendered but invisible, so the song keeps playing. */
+.garden .song-card { box-sizing: border-box; position: fixed; z-index: 7; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(80px + env(safe-area-inset-top, 0px)); width: min(340px, calc(100vw - 32px)); padding: 6px 38px 6px 6px; border-radius: 18px; background: var(--chip); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 16px 40px rgb(6 8 14 / .3); opacity: 0; transform: translateY(-8px); pointer-events: none; transition: opacity .5s, transform .5s cubic-bezier(.22, 1, .36, 1); }
+.garden .song-card.shown { opacity: 1; transform: none; pointer-events: auto; }
+.garden .song-card iframe { display: block; border: 0; border-radius: 12px; }
+.garden .song-card [data-song-close] { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border: 0; border-radius: 50%; background: none; color: #fff; font-size: 20px; line-height: 1; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) {
+  .garden .music.playing i { animation: none; height: 80%; }
+}
 .garden .rsvp-cta { flex: none; border: 0; border-radius: 999px; padding: 9px 16px; background: var(--petal); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
 
 .garden .stage { display: grid; align-items: center; justify-items: end; min-height: 0; padding-block: 8px; }
@@ -174,6 +192,9 @@
   .garden .seal { width: 92px; height: 92px; margin: -46px 0 0 -46px; }
   .garden .top { flex-wrap: wrap; gap: 10px; padding-block: 12px 6px; }
   .garden .rsvp-cta { margin-left: auto; padding: 8px 14px; }
+  .garden .music:not([hidden]) { margin-left: auto; }
+  .garden .music:not([hidden]) + .rsvp-cta { margin-left: 0; }
+  .garden .song-card { top: calc(156px + env(safe-area-inset-top, 0px)); }
   .garden .chapters { order: 3; width: 100%; margin-inline: 0; }
   /* Chapters open as a bottom sheet that scrolls inside itself. */
   .garden .stage, .garden .stage[data-side="left"] { align-items: end; justify-items: stretch; }
@@ -200,10 +221,10 @@
    stutter on Android. Solid fills read just as well. The envelope's paper and wax use heavy SVG
    filters, so the moving pieces get their own GPU layers and are not repainted while they animate. */
 @media (max-width: 720px) {
-  .garden .panel, .garden .chapters, .garden .step, .garden .toggles, .garden .spot span { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .garden .panel, .garden .chapters, .garden .step, .garden .toggles, .garden .music, .garden .song-card, .garden .spot span { backdrop-filter: none; -webkit-backdrop-filter: none; }
   .garden .panel, .garden .stage[data-side="left"] .panel { background: rgb(255 252 247 / .96); }
   .garden .panel.anchored { background: rgb(255 252 247 / .95); backdrop-filter: none; -webkit-backdrop-filter: none; }
-  .garden .chapters, .garden .step, .garden .toggles { background: rgb(36 26 20 / .66); }
+  .garden .chapters, .garden .step, .garden .toggles, .garden .music, .garden .song-card { background: rgb(36 26 20 / .66); }
   .garden .spot span { background: rgb(36 26 20 / .74); }
   .garden .env-flap, .garden .seal .half, .garden .envelope { will-change: transform; }
 }

@@ -43,6 +43,11 @@ export type GardenContent = {
   /** The three pictures hung on the hedge. */
   wall: GardenPhoto[];
   gallery: GardenPhoto[];
+  /**
+   * Either an audio file (src) or a Spotify track id (spotify); it starts when the seal is broken.
+   * The header button pauses the audio file, or shows the Spotify player.
+   */
+  song?: { title: string; artist: string; src?: string; spotify?: string };
   ask: {
     eyebrow: string;
     /** Shown after the guest's name: "Nonye, will you be my chief bridesmaid?" */

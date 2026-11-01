@@ -3,6 +3,26 @@
 import { CHAPTERS, type ChapterId, type GardenContent, type GardenPhoto } from "./content";
 import { createGardenScene, PLACES, type GardenScene, type TimeOfDay } from "./garden-scene";
 
+// The parts of Spotify's iFrame API the song player uses.
+type SpotifyController = {
+  play(): void;
+  pause(): void;
+  resume(): void;
+  addListener(event: "playback_update", listener: (e: { data: { isPaused: boolean } }) => void): void;
+  addListener(event: "ready", listener: () => void): void;
+};
+declare global {
+  interface Window {
+    onSpotifyIframeApiReady?: (api: {
+      createController(
+        element: HTMLElement,
+        options: { uri: string; width: string; height: number },
+        ready: (controller: SpotifyController) => void,
+      ): void;
+    }) => void;
+  }
+}
+
 const SPOTS = CHAPTERS.filter((c) => PLACES[c.id].anchor);
 /** On phones a chapter opens as a bottom sheet; the camera lifts its object into the space above. */
 const SHEET_SHIFT = 0.16;
@@ -169,6 +189,7 @@ export function mountGarden(root: HTMLElement): void {
     const reduceMotion = motionQuery.matches;
     navigator.vibrate?.([14, 40, 8]);
     if (!reduceMotion) dropSeal();
+    startSong();
     sealed.classList.add("cracked");
     window.setTimeout(() => sealed.classList.replace("cracked", "opened"), reduceMotion ? 0 : 250);
     window.setTimeout(openGarden, reduceMotion ? 0 : 900);
@@ -302,6 +323,134 @@ export function mountGarden(root: HTMLElement): void {
     });
   });
 
+  // --- the song ---
+
+  // Either an audio file, played and paused from the music button in the header, or a Spotify
+  // track whose player the button shows and hides. Browsers only allow sound after a tap, so both
+  // start with the tap on the seal, and both step aside while a video plays.
+  const song = root.querySelector<HTMLAudioElement>("[data-song]");
+  const songCard = root.querySelector<HTMLElement>("[data-song-card]");
+  const musicButton = root.querySelector<HTMLButtonElement>("[data-music]");
+  const songName = `${content.song?.title} by ${content.song?.artist}`;
+  let songOn = false, fade = 0;
+  let spotify: SpotifyController | null = null;
+  let spotifyLoading = false, spotifyReady = false, spotifyStarted = false, spotifyPlaying = false;
+  let playWhenReady = false, resumeAfterVideo = false;
+
+  const showPlaying = (playing: boolean) => musicButton?.classList.toggle("playing", playing);
+
+  // The file only downloads once the seal is broken, fades in, and steps aside while a photo or
+  // video is open or the tab is hidden.
+  function setSong(on: boolean) {
+    if (!song || !musicButton) return;
+    songOn = on;
+    musicButton.setAttribute("aria-pressed", String(on));
+    musicButton.setAttribute("aria-label", `${on ? "Pause" : "Play"} ${songName}`);
+    showPlaying(on);
+    resumeSong();
+  }
+
+  function resumeSong() {
+    if (!song) return;
+    window.clearInterval(fade);
+    if (!songOn || !lightbox.hidden || document.hidden) {
+      song.pause();
+      return;
+    }
+    song.volume = 0;
+    song.play().then(
+      () => {
+        // iOS ignores volume, so there the song simply starts.
+        fade = window.setInterval(() => {
+          song.volume = Math.min(1, song.volume + 0.05);
+          if (song.volume >= 1) window.clearInterval(fade);
+        }, 80);
+      },
+      // A pause during the fade-in is fine; a browser that blocks sound turns the button off.
+      (e: DOMException) => e.name === "NotAllowedError" && setSong(false),
+    );
+  }
+
+  // The Spotify player loads behind the envelope, so it is ready to start the moment the seal is
+  // tapped. While tucked away it stays rendered but invisible: Spotify holds back playback in a
+  // player that isn't on the page.
+  function showSongCard(show: boolean) {
+    if (!songCard || !musicButton) return;
+    songCard.classList.toggle("shown", show);
+    songCard.inert = !show;
+    musicButton.setAttribute("aria-expanded", String(show));
+  }
+
+  function playSpotify() {
+    if (!spotifyReady) {
+      playWhenReady = true;
+      return;
+    }
+    // play() starts the track from the top; resume() carries on from where it paused.
+    if (spotifyStarted) spotify?.resume();
+    else spotify?.play();
+    spotifyStarted = true;
+  }
+
+  // A video pauses the song; closing it carries on from the same spot, unless she had paused it.
+  function pauseSpotifyForVideo() {
+    resumeAfterVideo = spotifyPlaying;
+    if (spotifyPlaying) spotify?.pause();
+  }
+
+  function resumeSpotifyAfterVideo() {
+    if (!resumeAfterVideo) return;
+    resumeAfterVideo = false;
+    playSpotify();
+  }
+
+  function loadSpotify() {
+    const track = content.song?.spotify;
+    if (!songCard || !track || spotifyLoading) return;
+    spotifyLoading = true;
+    window.onSpotifyIframeApiReady = (api) =>
+      api.createController(
+        songCard.querySelector<HTMLElement>("[data-spotify]")!,
+        { uri: `spotify:track:${track}`, width: "100%", height: 80 },
+        (controller) => {
+          spotify = controller;
+          controller.addListener("playback_update", (e) => {
+            spotifyPlaying = !e.data.isPaused;
+            showPlaying(spotifyPlaying);
+          });
+          controller.addListener("ready", () => {
+            spotifyReady = true;
+            if (playWhenReady) playSpotify();
+          });
+        },
+      );
+    const script = document.createElement("script");
+    script.src = "https://open.spotify.com/embed/iframe-api/v1";
+    script.async = true;
+    document.head.append(script);
+  }
+
+  function startSong() {
+    if (!musicButton) return;
+    musicButton.hidden = false;
+    if (songCard) playSpotify();
+    else setSong(true);
+  }
+
+  // A missing or unplayable file hides the button instead of leaving it dead.
+  song?.addEventListener("error", () => {
+    songOn = false;
+    if (musicButton) musicButton.hidden = true;
+  });
+  musicButton?.addEventListener("click", () => (songCard ? showSongCard(songCard.inert) : setSong(!songOn)));
+  songCard?.querySelector("[data-song-close]")?.addEventListener("click", () => {
+    showSongCard(false);
+    musicButton?.focus();
+  });
+  document.addEventListener("visibilitychange", resumeSong);
+  if (document.readyState === "complete") loadSpotify();
+  else window.addEventListener("load", loadSpotify, { once: true });
+
   // --- full-screen photos and videos ---
 
   const lightbox = find("[data-lightbox]");
@@ -322,11 +471,13 @@ export function mountGarden(root: HTMLElement): void {
       lightboxVideo.poster = photo.src;
       lightboxVideo.src = photo.video;
       lightboxVideo.play().catch(() => {});
+      pauseSpotifyForVideo();
     } else {
       lightboxImg.src = photo.src;
       lightboxImg.alt = photo.caption;
     }
     lightbox.hidden = false;
+    resumeSong();
     find("[data-lightbox-close]").focus();
   }
 
@@ -336,6 +487,8 @@ export function mountGarden(root: HTMLElement): void {
     lightboxVideo.pause();
     lightboxVideo.removeAttribute("src");
     lightboxVideo.load();
+    resumeSong();
+    resumeSpotifyAfterVideo();
     returnFocus?.focus({ preventScroll: true });
   }
 
