@@ -82,9 +82,10 @@
 .garden .monogram { flex: none; display: block; width: auto; height: 40px; filter: drop-shadow(0 1px 8px rgb(0 0 0 / .45)); }
 .garden .chapters { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; min-width: 0; margin-inline: auto; padding: 4px; border-radius: 999px; background: var(--chip); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .garden .chapters::-webkit-scrollbar { display: none; }
-.garden .chapters button { flex: none; border: 0; background: none; color: rgb(255 255 255 / .84); padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background .3s, color .3s; }
+.garden .chapters > * { flex: none; border: 0; background: none; color: rgb(255 255 255 / .84); padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background .3s, color .3s; }
+.garden .chapters span { cursor: default; }
 .garden .chapters button:hover { color: #fff; background: rgb(255 255 255 / .12); }
-.garden .chapters button[aria-current="true"] { background: var(--linen); color: var(--ink); }
+.garden .chapters > [aria-current]:not([aria-current="false"]) { background: var(--linen); color: var(--ink); }
 /* Music: three bars that dance while the song plays and rest when it is paused. */
 .garden .music { flex: none; display: flex; align-items: flex-end; justify-content: center; gap: 3px; width: 36px; height: 36px; padding: 11px 0; border: 0; border-radius: 50%; background: var(--chip); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); cursor: pointer; }
 .garden .music i { width: 3px; height: 30%; border-radius: 2px; background: #fff; transition: height .3s; }

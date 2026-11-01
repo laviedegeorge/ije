@@ -101,6 +101,7 @@ export const ffInviteContent: GardenContent = {
 		intro:
 			"One roof in Ajah, early mornings battling traffic, late nights on the couch talking about everything and nothing. You saw me at my most exhausted and my most hopeful, and through it all you were there. Tap a picture to open it; the videos play with sound.",
 	},
+	inOrder: true,
 	wall: [memories.video1, memories.photo1, memories.video4],
 	gallery: Object.values(memories),
 	// Spotify until there's an audio file; to switch, replace `spotify` with

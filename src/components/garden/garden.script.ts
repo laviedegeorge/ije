@@ -50,7 +50,8 @@ export function mountGarden(root: HTMLElement): void {
   const app = find("[data-app]");
   const stage = find("[data-stage]");
   const toggles = find("[data-toggles]");
-  const navButtons = [...root.querySelectorAll<HTMLButtonElement>(".chapters [data-go]")];
+  const navButtons = [...root.querySelectorAll<HTMLElement>(".chapters > *")];
+  const current = content.inOrder ? "step" : "true";
   const dots = [...root.querySelectorAll<HTMLElement>(".dots i")];
   const [prevStep, nextStep] = [...root.querySelectorAll<HTMLButtonElement>("[data-step]")];
   const spotEls = new Map<ChapterId, HTMLButtonElement>();
@@ -235,7 +236,7 @@ export function mountGarden(root: HTMLElement): void {
 
     stage.dataset.side = PLACES[chapter.id].side ?? "right";
     navButtons.forEach((b, n) => {
-      b.setAttribute("aria-current", String(n === index));
+      b.setAttribute("aria-current", n === index ? current : "false");
       if (n === index) b.scrollIntoView({ block: "nearest", inline: "center" });
     });
     dots.forEach((d, n) => d.classList.toggle("on", n === index));
@@ -302,8 +303,8 @@ export function mountGarden(root: HTMLElement): void {
     start = null;
   });
 
-  // Objects in the garden are clickable once the camera has landed.
-  const pickAt = (e: MouseEvent) => (opened ? scene?.pick(e.clientX, e.clientY) ?? null : null);
+  // Objects in the garden are clickable once the camera has landed, unless the chapters go in order.
+  const pickAt = (e: MouseEvent) => (opened && !content.inOrder ? scene?.pick(e.clientX, e.clientY) ?? null : null);
   canvas.addEventListener("pointermove", (e) => {
     if (!opened || (scene?.flight() ?? 0) < 1) return;
     const id = pickAt(e);

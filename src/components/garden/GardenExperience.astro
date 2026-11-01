@@ -28,7 +28,7 @@ const reply = replyHref(content.ask);
   </div>
 
   <div class="spots" aria-label="Places in the garden" data-spots>
-    {CHAPTERS.filter((c) => c.id !== "welcome").map((c) => (
+    {!content.inOrder && CHAPTERS.filter((c) => c.id !== "welcome").map((c) => (
       <button type="button" class="spot" data-spot={c.id} data-go={c.id}>
         <i />
         <span>{c.label}</span>
@@ -40,7 +40,9 @@ const reply = replyHref(content.ask);
     <header class="top">
       <img class="monogram" src="/assets/monogram-white.webp" alt={coupleNames} width="263" height="240" decoding="async" />
       <nav class="chapters" aria-label="Chapters">
-        {CHAPTERS.map((c, n) => (
+        {CHAPTERS.map((c, n) => content.inOrder ? (
+          <span aria-current={n === 0 ? "step" : "false"}>{c.label}</span>
+        ) : (
           <button type="button" aria-current={n === 0 ? "true" : "false"} data-go={c.id}>{c.label}</button>
         ))}
       </nav>
@@ -53,7 +55,7 @@ const reply = replyHref(content.ask);
           <i /><i /><i />
         </button>
       ) : null}
-      <button class="rsvp-cta" type="button" data-go="ask">Answer</button>
+      {!content.inOrder && <button class="rsvp-cta" type="button" data-go="ask">Answer</button>}
     </header>
     <main class="stage" data-side="right" data-stage>
       <article class="panel enter anchored" tabindex="-1" aria-live="polite" data-panel></article>

@@ -40,6 +40,11 @@ export type GardenContent = {
   story: { eyebrow: string; headline: string; paragraphs: string[]; portrait: GardenPhoto };
   gathering: { eyebrow: string; headline: string; intro?: string; items: GardenGathering[] };
   memories: { eyebrow: string; headline: string; intro: string };
+  /**
+   * The guest walks the chapters in order with the back and next buttons only: the chapter bar
+   * just shows where she is, and the labels, objects and Answer button that jump ahead are left out.
+   */
+  inOrder?: boolean;
   /** The three pictures hung on the hedge. */
   wall: GardenPhoto[];
   gallery: GardenPhoto[];
